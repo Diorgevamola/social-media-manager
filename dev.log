@@ -1,0 +1,1934 @@
+
+> social-media-manager@1.0.0 dev
+> next dev --port 5000 --port 5000
+
+   ▲ Next.js 15.1.6
+   - Local:        http://localhost:5000
+   - Network:      http://192.168.3.10:5000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.1s
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 10.6s (945 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/60a7cc0394bb86d7.webpack.hot-update.json 404 in 11426ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1706ms (948 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/60a7cc0394bb86d7.webpack.hot-update.json 404 in 287ms
+ GET / 200 in 2033ms
+ GET / 307 in 213ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 3.9s (1321 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/60a7cc0394bb86d7.webpack.hot-update.json 404 in 546ms
+ GET /dashboard 200 in 4468ms
+ GET / 307 in 263ms
+ GET /dashboard 200 in 656ms
+ ✓ Compiled /icon in 442ms (779 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 911ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 73ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 59ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 96ms
+ ○ Compiling /dashboard/schedule ...
+ ✓ Compiled /dashboard/schedule in 4.4s (3158 modules)
+ GET /dashboard/schedule 200 in 5285ms
+ GET /dashboard/schedule 200 in 581ms
+ GET /dashboard/schedule 200 in 838ms
+ GET /dashboard/schedule 200 in 537ms
+ GET /dashboard/schedule 200 in 556ms
+ ✓ Compiled /icon in 220ms (2015 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 358ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 38ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 41ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 69ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 39ms
+ ✓ Compiled /api/schedule/latest in 383ms (3179 modules)
+ GET /api/schedule/latest?accountId=01332691-47e0-45b6-9ef0-7f4225ecb6c3 200 in 843ms
+ ○ Compiling /api/schedule/generate ...
+ ✓ Compiled /api/schedule/generate in 631ms (3195 modules)
+ POST /api/schedule/generate 200 in 55638ms
+ ✓ Compiled /api/schedule/save in 393ms (3192 modules)
+ POST /api/schedule/save 500 in 1883ms
+ ○ Compiling /api/media/generate-image ...
+ ✓ Compiled /api/media/generate-image in 787ms (3313 modules)
+ POST /api/media/generate-image 200 in 19445ms
+ ○ Compiling /api/media/generate-video ...
+ ✓ Compiled /api/media/generate-video in 732ms (3313 modules)
+ POST /api/media/generate-image 200 in 19876ms
+ POST /api/media/generate-image 200 in 18765ms
+ POST /api/media/generate-image 200 in 20979ms
+ POST /api/media/generate-image 200 in 19191ms
+ POST /api/media/generate-video 200 in 66261ms
+ POST /api/media/generate-image 200 in 19426ms
+ POST /api/media/generate-image 200 in 21889ms
+ POST /api/media/generate-image 200 in 18475ms
+ ✓ Compiled in 2.9s (3325 modules)
+ GET /dashboard/schedule 200 in 519ms
+ ○ Compiling /icon ...
+ ✓ Compiled /icon in 1204ms (2154 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 1425ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 94ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 76ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 69ms
+ POST /api/media/generate-image 200 in 17304ms
+ POST /api/media/generate-image 200 in 20964ms
+ POST /api/media/generate-image 200 in 17964ms
+ ✓ Compiled /api/media/generate-video in 318ms (2156 modules)
+ POST /api/media/generate-video 200 in 76659ms
+ POST /api/media/generate-video 200 in 85847ms
+ POST /api/media/generate-video 200 in 85771ms
+ POST /api/media/generate-video 200 in 64495ms
+ ✓ Compiled in 656ms (1174 modules)
+ GET /dashboard/schedule 200 in 1071ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 123ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 79ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 119ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 73ms
+ POST /api/media/generate-video 200 in 74977ms
+ POST /api/media/generate-video 200 in 65339ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 75ms
+ ○ Compiling /api/schedule/latest ...
+ ✓ Compiled /api/schedule/latest in 883ms (2016 modules)
+ GET /api/schedule/latest?accountId=0da6679e-4da0-4b55-a922-2b8ac1d6d22b 200 in 2066ms
+ ✓ Compiled in 567ms (1174 modules)
+ GET /dashboard/schedule 200 in 497ms
+ ✓ Compiled /icon in 473ms (2015 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 587ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 68ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 69ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 66ms
+ ✓ Compiled in 782ms (3189 modules)
+ GET /dashboard/schedule 200 in 358ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 60ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 44ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 46ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 72ms
+ ✓ Compiled in 828ms (3189 modules)
+ GET /dashboard/schedule 200 in 336ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 45ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 55ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 47ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 60ms
+ ✓ Compiled in 791ms (3189 modules)
+ GET /dashboard/schedule 200 in 328ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 50ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 47ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 66ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 60ms
+ ✓ Compiled in 709ms (3189 modules)
+ GET /dashboard/schedule 200 in 286ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 82ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 49ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 55ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 48ms
+ ✓ Compiled in 556ms (3189 modules)
+ GET /dashboard/schedule 200 in 304ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 46ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 46ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 80ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 49ms
+ ✓ Compiled in 1052ms (3173 modules)
+ GET /dashboard/schedule 200 in 427ms
+ ✓ Compiled /icon in 255ms (2015 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 533ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 65ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 72ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 94ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 71ms
+ ○ Compiling /api/schedule/posts/[id] ...
+ ✓ Compiled /api/schedule/posts/[id] in 724ms (3179 modules)
+ DELETE /api/schedule/posts/8b658053-d7a6-47e0-bb77-0b55b52270bc 200 in 2388ms
+ ○ Compiling /api/media/generate-image ...
+ ✓ Compiled /api/media/generate-image in 931ms (2153 modules)
+ POST /api/media/generate-image 200 in 18346ms
+ POST /api/media/generate-image 200 in 19647ms
+ POST /api/media/generate-image 200 in 18823ms
+ POST /api/media/generate-image 200 in 20372ms
+ POST /api/media/generate-image 200 in 17518ms
+ POST /api/media/generate-image 200 in 17378ms
+ GET /dashboard/schedule 200 in 852ms
+ ○ Compiling /icon ...
+ ✓ Compiled /icon in 527ms (2015 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 626ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 51ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 43ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 50ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 55ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 46ms
+ ✓ Compiled /api/schedule/latest in 415ms (2019 modules)
+ GET /api/schedule/latest?accountId=0da6679e-4da0-4b55-a922-2b8ac1d6d22b 200 in 1272ms
+ ✓ Compiled in 1058ms (3173 modules)
+ GET /dashboard/schedule 200 in 713ms
+ ✓ Compiled /icon in 306ms (2015 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 490ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 65ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 56ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 61ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 779ms (3189 modules)
+ GET /dashboard/schedule 200 in 858ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 72ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 54ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 77ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 48ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 58ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 54ms
+ ✓ Compiled in 641ms (3189 modules)
+ GET /dashboard/schedule 200 in 338ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 58ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 70ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 70ms
+ ✓ Compiled in 1032ms (3189 modules)
+ GET /dashboard/schedule 200 in 365ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 85ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 58ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 83ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 67ms
+ ✓ Compiled in 776ms (3189 modules)
+ GET /dashboard/schedule 200 in 290ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 55ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 71ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 69ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 58ms
+ ✓ Compiled in 776ms (3189 modules)
+ GET /dashboard/schedule 200 in 332ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 70ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 57ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 67ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 72ms
+ ✓ Compiled in 760ms (3189 modules)
+ GET /dashboard/schedule 200 in 332ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 84ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 68ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 79ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 63ms
+ ✓ Compiled in 889ms (3189 modules)
+ GET /dashboard/schedule 200 in 310ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 93ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 81ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 83ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 74ms
+ ✓ Compiled in 720ms (3189 modules)
+ GET /dashboard/schedule 200 in 351ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 73ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 63ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 53ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 50ms
+ ✓ Compiled in 666ms (3189 modules)
+ GET /dashboard/schedule 200 in 289ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 62ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 109ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 53ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 71ms
+ ✓ Compiled in 602ms (3189 modules)
+ GET /dashboard/schedule 200 in 302ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 60ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 88ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 46ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 57ms
+ ○ Compiling /api/schedule/latest ...
+ ✓ Compiled /api/schedule/latest in 911ms (2016 modules)
+ GET /api/schedule/latest?accountId=0da6679e-4da0-4b55-a922-2b8ac1d6d22b 200 in 1779ms
+ ○ Compiling /api/media/generate-image ...
+ ✓ Compiled /api/media/generate-image in 1017ms (2153 modules)
+ POST /api/media/generate-image 200 in 24086ms
+ ○ Compiling /api/media/upload ...
+ ✓ Compiled /api/media/upload in 839ms (3315 modules)
+ POST /api/media/upload 500 in 1780ms
+ POST /api/media/generate-image 200 in 15212ms
+ POST /api/media/generate-image 200 in 19471ms
+ POST /api/media/generate-image 200 in 19781ms
+ ✓ Compiled in 2.1s (1174 modules)
+ GET /dashboard/schedule 200 in 918ms
+ ○ Compiling /icon ...
+ ✓ Compiled /icon in 4.5s (3189 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 5336ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 338ms
+ GET /dashboard/schedule 200 in 1185ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 172ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 169ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 143ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 680ms
+ ✓ Compiled in 1645ms (1174 modules)
+ GET /dashboard/schedule 200 in 536ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 553ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 118ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 94ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 97ms
+ ✓ Compiled in 814ms (1174 modules)
+ GET /dashboard/schedule 200 in 292ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 101ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 110ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 104ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 85ms
+ ✓ Compiled in 1680ms (3344 modules)
+ GET /dashboard/schedule 200 in 1315ms
+ GET /dashboard/schedule 200 in 262ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 128ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 500ms
+ ✓ Compiled in 2s (3344 modules)
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 1333ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 103ms
+ GET /dashboard/schedule 200 in 1716ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 99ms
+ GET /dashboard/schedule 200 in 313ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 83ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 72ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 58ms
+ ✓ Compiled in 281ms (1174 modules)
+ GET /dashboard/schedule 200 in 269ms
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ ⨯ [Error: failed to pipe response] {
+  [cause]: [TypeError: Invalid URL] {
+    code: 'ERR_INVALID_URL',
+    input: '.\\file:\\C:\\Users\\diorg\\social-media-manager\\node_modules\\next\\dist\\compiled\\@vercel\\og\\noto-sans-v27-latin-regular.ttf'
+  }
+}
+ GET /icon?050b617570de402a 500 in 108ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.1s (3193 modules)
+ GET /icon?050b617570de402a 404 in 2225ms
+ GET /dashboard/schedule 200 in 396ms
+ ✓ Compiled in 423ms (1177 modules)
+ GET /dashboard/schedule 200 in 257ms
+ ✓ Compiled in 422ms (1177 modules)
+ GET /dashboard/schedule 200 in 500ms
+ ✓ Compiled in 339ms (1177 modules)
+ GET /dashboard/schedule 200 in 262ms
+ ✓ Compiled in 386ms (1177 modules)
+ GET /dashboard/schedule 200 in 214ms
+ ✓ Compiled in 511ms (1177 modules)
+ GET /dashboard/schedule 200 in 190ms
+ ✓ Compiled in 340ms (1177 modules)
+ GET /dashboard/schedule 200 in 189ms
+ ✓ Compiled in 399ms (1177 modules)
+ GET /dashboard/schedule 200 in 185ms
+ ✓ Compiled in 320ms (1177 modules)
+ GET /dashboard/schedule 200 in 241ms
+ ✓ Compiled in 281ms (1177 modules)
+ GET /dashboard/schedule 200 in 206ms
+ ✓ Compiled in 328ms (1177 modules)
+ GET /dashboard/schedule 200 in 459ms
+ ✓ Compiled in 298ms (1177 modules)
+ GET /dashboard/schedule 200 in 197ms
+ ✓ Compiled in 316ms (1177 modules)
+ GET /dashboard/schedule 200 in 195ms
+ ✓ Compiled in 313ms (1177 modules)
+ GET /dashboard/schedule 200 in 197ms
+ ✓ Compiled in 333ms (1177 modules)
+ GET /dashboard/schedule 200 in 228ms
+ ✓ Compiled in 332ms (1174 modules)
+ GET /dashboard/schedule 200 in 191ms
+ ✓ Compiled in 321ms (1174 modules)
+ GET /dashboard/schedule 200 in 204ms
+ ✓ Compiled in 1540ms (3328 modules)
+ GET /dashboard/schedule 200 in 957ms
+ GET /dashboard/schedule 200 in 231ms
+ ✓ Compiled in 421ms (1174 modules)
+ GET /dashboard/schedule 200 in 196ms
+ ✓ Compiled in 613ms (1174 modules)
+ GET /dashboard/schedule 200 in 205ms
+ ✓ Compiled in 3.8s (3342 modules)
+ GET /dashboard/schedule 200 in 3098ms
+ GET /dashboard/schedule 200 in 202ms
+ ✓ Compiled in 606ms (3173 modules)
+ GET /dashboard/schedule 200 in 334ms
+ ✓ Compiled in 571ms (3173 modules)
+ GET /dashboard/schedule 200 in 275ms
+ ✓ Compiled in 766ms (3173 modules)
+ GET /dashboard/schedule 200 in 302ms
+ ✓ Compiled in 518ms (1174 modules)
+ GET /dashboard/schedule 200 in 224ms
+ ✓ Compiled in 1153ms (3173 modules)
+ GET /dashboard/schedule 200 in 358ms
+ ✓ Compiled in 857ms (3173 modules)
+ GET /dashboard/schedule 200 in 352ms
+ ○ Compiling /api/media/generate-image ...
+ ✓ Compiled /api/media/generate-image in 1683ms (2151 modules)
+ POST /api/media/generate-image 200 in 19616ms
+ POST /api/media/generate-image 200 in 17524ms
+ POST /api/media/generate-image 200 in 16550ms
+ ○ Compiling /dashboard/accounts ...
+ ✓ Compiled /dashboard/accounts in 2.3s (3354 modules)
+ GET /dashboard/accounts 200 in 3067ms
+ GET /dashboard/schedule 200 in 585ms
+ ○ Compiling /api/schedule/latest ...
+ ✓ Compiled /api/schedule/latest in 517ms (2043 modules)
+ GET /api/schedule/latest?accountId=01332691-47e0-45b6-9ef0-7f4225ecb6c3 200 in 1096ms
+ GET /dashboard/schedule 200 in 282ms
+ ○ Compiling /api/schedule/generate ...
+ ✓ Compiled /api/schedule/generate in 571ms (2059 modules)
+ GET /dashboard/schedule 200 in 217ms
+ POST /api/schedule/generate 200 in 52181ms
+ ✓ Compiled /api/schedule/save in 312ms (2059 modules)
+ GET /dashboard/schedule 200 in 260ms
+ POST /api/schedule/save 200 in 1392ms
+ ✓ Compiled /api/media/generate-image in 345ms (2180 modules)
+ POST /api/media/generate-image 200 in 21904ms
+ ○ Compiling /api/schedule/post-id ...
+ ✓ Compiled /api/schedule/post-id in 1409ms (3374 modules)
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-02-20&theme=Erros%20comuns%20que%20atrasam%20seu%20progresso 200 in 1869ms
+ GET /dashboard/schedule 200 in 313ms
+ ○ Compiling /api/media/upload ...
+ ✓ Compiled /api/media/upload in 632ms (2184 modules)
+ POST /api/media/upload 200 in 1867ms
+ POST /api/media/generate-image 200 in 23506ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-02-20&theme=Por%20tr%C3%A1s%20das%20c%C3%A2meras%3A%20um%20dia%20produtivo! 200 in 374ms
+ POST /api/media/upload 200 in 1231ms
+ POST /api/media/generate-image 200 in 19008ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-02-24&theme=H%C3%A1bitos%20di%C3%A1rios%20de%20alta%20performance 200 in 334ms
+ POST /api/media/upload 200 in 1735ms
+ POST /api/media/generate-image 200 in 18456ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-02-25&theme=O%20poder%20da%20consist%C3%AAncia 200 in 388ms
+ POST /api/media/upload 200 in 3012ms
+ POST /api/media/generate-image 200 in 17364ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-02-26&theme=Ferramentas%20para%20otimizar%20seu%20tempo 200 in 390ms
+ POST /api/media/upload 200 in 1362ms
+ POST /api/media/generate-image 200 in 17181ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-02-27&theme=Como%20lidar%20com%20a%20press%C3%A3o%20no%20trabalho 200 in 335ms
+ POST /api/media/upload 200 in 1143ms
+ POST /api/media/generate-image 200 in 20781ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-02-27&theme=Caf%C3%A9%20da%20manh%C3%A3%20de%20campe%C3%A3o 200 in 373ms
+ POST /api/media/upload 200 in 1563ms
+ POST /api/media/generate-image 200 in 16272ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-03-03&theme=Habilidades%20essenciais%20para%20o%20futuro%20do%20trabalho 200 in 374ms
+ POST /api/media/upload 200 in 1477ms
+ POST /api/media/generate-image 200 in 17668ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-03-04&theme=O%20maior%20investimento%20%C3%A9%20em%20voc%C3%AA 200 in 363ms
+ POST /api/media/upload 200 in 1338ms
+ POST /api/media/generate-image 200 in 22661ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-03-05&theme=Livros%20que%20todo%20empreendedor%20deve%20ler 200 in 378ms
+ POST /api/media/upload 200 in 1398ms
+ ○ Compiling /dashboard/settings ...
+ ✓ Compiled /dashboard/settings in 2.6s (3394 modules)
+ GET /dashboard/settings 200 in 3053ms
+ GET /dashboard/settings 200 in 218ms
+ GET /dashboard/settings 200 in 206ms
+ GET /dashboard/settings 200 in 26ms
+ ○ Compiling /dashboard/settings/api-keys ...
+ ✓ Compiled /dashboard/settings/api-keys in 1309ms (3425 modules)
+ GET /dashboard/settings/api-keys 200 in 1445ms
+ ○ Compiling /api/keys ...
+ ✓ Compiled /api/keys in 903ms (3429 modules)
+ GET /api/keys 500 in 1399ms
+ GET /api/keys 500 in 376ms
+ POST /api/media/generate-image 200 in 17041ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-03-06&theme=Dicas%20para%20manter%20o%20foco%20em%20seus%20objetivos 200 in 374ms
+ POST /api/media/upload 200 in 1610ms
+ POST /api/keys 500 in 375ms
+ POST /api/media/generate-image 200 in 21676ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-03-06&theme=Um%20momento%20de%20reflex%C3%A3o 200 in 365ms
+ POST /api/media/upload 200 in 999ms
+ POST /api/media/generate-image 200 in 14560ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-03-10&theme=Dicas%20para%20construir%20uma%20marca%20pessoal%20forte 200 in 333ms
+ POST /api/media/upload 200 in 1304ms
+ POST /api/media/generate-image 200 in 17196ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-03-11&theme=O%20poder%20de%20acreditar%20em%20si%20mesmo 200 in 356ms
+ POST /api/media/upload 200 in 2093ms
+ ✓ Compiled in 1675ms (3443 modules)
+ GET /dashboard/settings/api-keys 200 in 216ms
+ POST /api/media/generate-image 200 in 19823ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-03-12&theme=Estrat%C3%A9gias%20para%20superar%20o%20medo%20do%20julgamento 200 in 477ms
+ ○ Compiling /api/media/generate-video ...
+ ✓ Compiled /api/media/generate-video in 702ms (2226 modules)
+ POST /api/media/upload 200 in 2377ms
+ ✓ Compiled in 975ms (3445 modules)
+ GET /dashboard/settings/api-keys 200 in 219ms
+ POST /api/keys 201 in 385ms
+ GET /api/keys 200 in 351ms
+ ○ Compiling /docs ...
+ ✓ Compiled /docs in 766ms (3435 modules)
+ GET /docs 200 in 837ms
+ GET /docs 200 in 14ms
+ ✓ Compiled in 871ms (3435 modules)
+ GET /docs 200 in 57ms
+ ✓ Compiled in 1051ms (3435 modules)
+ GET /docs 200 in 41ms
+ POST /api/media/generate-video 200 in 77048ms
+ GET /api/schedule/post-id?scheduleId=829c5b3f-32bc-4598-bc57-b1d945609990&date=2026-02-23&theme=Transforme%20obst%C3%A1culo%20em%20trampolim 200 in 549ms
+ POST /api/media/generate-video 200 in 679ms
+ POST /api/media/generate-video 200 in 521ms
+ POST /api/media/upload 200 in 2641ms
+ GET /api/keys 200 in 388ms
+ GET /api/keys 200 in 351ms
+ GET /dashboard/accounts 200 in 363ms
+ ○ Compiling /dashboard/analytics ...
+ ✓ Compiled /dashboard/analytics in 4.5s (3443 modules)
+ GET /dashboard/schedule 200 in 206ms
+ GET /dashboard/analytics 200 in 5187ms
+ GET /dashboard/schedule 200 in 5090ms
+ ○ Compiling /api/schedule/latest ...
+ ✓ Compiled /api/schedule/latest in 1600ms (2226 modules)
+ GET /api/schedule/latest?accountId=01332691-47e0-45b6-9ef0-7f4225ecb6c3 200 in 2478ms
+ ✓ Compiled in 2.9s (3278 modules)
+ GET /dashboard/schedule 200 in 748ms
+ ✓ Compiled in 884ms (1222 modules)
+ GET /dashboard/schedule 200 in 237ms
+ ✓ Compiled in 800ms (1222 modules)
+ ✓ Compiled in 457ms (1222 modules)
+ GET /dashboard/schedule 200 in 812ms
+ ✓ Compiled in 798ms (1222 modules)
+ GET /dashboard/schedule 200 in 213ms
+ GET /dashboard/schedule 200 in 233ms
+ ✓ Compiled in 365ms (1222 modules)
+ GET /dashboard/schedule 200 in 194ms
+ ✓ Compiled in 1127ms (1399 modules)
+ GET /docs 200 in 360ms
+ GET /dashboard/schedule 200 in 380ms
+[RangeError: Array buffer allocation failed]
+ ⨯ uncaughtException: [RangeError: Array buffer allocation failed]
+ ⨯ uncaughtException:  [RangeError: Array buffer allocation failed]
+[RangeError: Array buffer allocation failed]
+ ⨯ uncaughtException: [RangeError: Array buffer allocation failed]
+ ⨯ uncaughtException:  [RangeError: Array buffer allocation failed]
+ GET /dashboard/settings/api-keys 200 in 337ms
+ ○ Compiling /api/keys ...
+   Reload env: .env.local
+[?25h

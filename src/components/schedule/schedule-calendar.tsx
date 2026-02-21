@@ -1,0 +1,2430 @@
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Image, Film, Images, BookOpen, GalleryHorizontal, ChevronLeft, ChevronRight,
+  Clock, Palette, Type, Camera, Clapperboard, Sparkles, X, Loader2, PlusCircle,
+  Download, Plus, Trash2, FolderArchive, CheckCircle2, RefreshCw, Send,
+} from 'lucide-react'
+import type { GeneratedSchedule, SchedulePost, ScheduleDay } from '@/types/schedule'
+import type { MediaMap } from '@/app/dashboard/schedule/page'
+import { AddPostDialog } from '@/components/schedule/add-post-dialog'
+
+type PostType = 'post' | 'reel' | 'carousel' | 'story' | 'story_sequence'
+
+const TYPE_COLORS: Record<PostType, string> = {
+  post: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  reel: 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300',
+  carousel: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
+  story: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+  story_sequence: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+}
+
+const TYPE_DOT_COLORS: Record<PostType, string> = {
+  post: 'bg-blue-500',
+  reel: 'bg-pink-500',
+  carousel: 'bg-purple-500',
+  story: 'bg-orange-500',
+  story_sequence: 'bg-amber-500',
+}
+
+const TYPE_ICONS: Record<PostType, typeof Image> = {
+  post: Image,
+  reel: Film,
+  carousel: Images,
+  story: BookOpen,
+  story_sequence: GalleryHorizontal,
+}
+
+const TYPE_LABELS: Record<PostType, string> = {
+  post: 'Post',
+  reel: 'Reel',
+  carousel: 'Carrossel',
+  story: 'Story',
+  story_sequence: 'Seq. Stories',
+}
+
+const PT_MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+const PT_DAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+function safePostType(type: string): PostType {
+  return (type as PostType) in TYPE_ICONS ? (type as PostType) : 'post'
+}
+
+interface SelectedPost {
+  post: SchedulePost
+  day: ScheduleDay
+}
+
+interface ScheduleCalendarProps {
+  schedule: GeneratedSchedule
+  onRegenerate: () => void
+  regenerating: boolean
+  isStreaming?: boolean
+  scheduleId?: string | null
+  accountId?: string | null
+  accountConnected?: boolean
+  mediaMap?: MediaMap
+  onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
+  onPostAdded?: (date: string, post: SchedulePost, postId: string) => void
+  onPostDeleted?: (date: string, postId: string, theme: string) => void
+}
+
+export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regenerating, isStreaming, scheduleId, accountId, accountConnected = false, mediaMap = {}, onMediaSaved, onPostAdded, onPostDeleted }: ScheduleCalendarProps) {
+  const firstDateStr = schedule.schedule[0]?.date
+  const firstDate = firstDateStr ? new Date(firstDateStr + 'T12:00:00') : new Date()
+
+  const [viewYear, setViewYear] = useState(firstDate.getFullYear())
+  const [viewMonth, setViewMonth] = useState(firstDate.getMonth())
+  const [selected, setSelected] = useState<SelectedPost | null>(null)
+  const [addingPostDate, setAddingPostDate] = useState<string | null>(null)
+  const [sessionMedia, setSessionMedia] = useState<Record<string, SessionMediaEntry>>({})
+
+  // Zera sessionMedia apenas quando o cronograma muda de fato (geração nova ou troca de conta),
+  // NÃO quando scheduleId é atribuído após o save de um cronograma já exibido.
+  useEffect(() => {
+    setSessionMedia({})
+  }, [schedule.generated_at])
+
+  function handleSessionMediaAdded(key: string, src: string, mimeType: string) {
+    setSessionMedia(prev => ({ ...prev, [key]: { src, mimeType } }))
+  }
+
+  // Build a map: "yyyy-MM-dd" → ScheduleDay
+  const dayMap = new Map<string, ScheduleDay>()
+  for (const day of schedule.schedule) {
+    dayMap.set(day.date, day)
+  }
+
+  // Build calendar grid
+  const firstOfMonth = new Date(viewYear, viewMonth, 1)
+  const startDow = firstOfMonth.getDay() // 0=Sun
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+
+  const cells: (number | null)[] = [
+    ...Array(startDow).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
+  // Pad to complete last week
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
+    else setViewMonth(m => m - 1)
+  }
+
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1) }
+    else setViewMonth(m => m + 1)
+  }
+
+  function cellDateStr(day: number) {
+    return `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+
+  const totalPosts = schedule.schedule.reduce((s, d) => s + d.posts.length, 0)
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            {isStreaming && <Loader2 className="size-4 animate-spin text-primary" />}
+            {isStreaming ? 'Cronograma sendo gerado...' : 'Cronograma gerado'}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {schedule.schedule.length} {isStreaming ? 'dias prontos' : 'dias'} · {totalPosts} conteúdos
+            {!isStreaming && ` · @${schedule.account.username}`}
+          </p>
+        </div>
+        {!isStreaming && (
+          <Button variant="outline" size="sm" onClick={onRegenerate}>
+            <PlusCircle className="size-3.5" />
+            Novo cronograma
+          </Button>
+        )}
+      </div>
+
+      <div className="grid lg:grid-cols-[1fr_380px] gap-6 items-start">
+        {/* Calendar */}
+        <Card>
+          <CardContent className="p-4">
+            {/* Month nav */}
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={prevMonth} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+                <ChevronLeft className="size-4" />
+              </button>
+              <h3 className="text-sm font-semibold">
+                {PT_MONTHS[viewMonth]} {viewYear}
+              </h3>
+              <button onClick={nextMonth} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+
+            {/* Day headers */}
+            <div className="grid grid-cols-7 mb-1">
+              {PT_DAYS_SHORT.map(d => (
+                <div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Grid */}
+            <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
+              {cells.map((day, idx) => {
+                if (!day) {
+                  return <div key={`empty-${idx}`} className="bg-muted/20 min-h-[72px]" />
+                }
+                const dateStr = cellDateStr(day)
+                const schedDay = dayMap.get(dateStr)
+                const isToday = dateStr === new Date().toISOString().slice(0, 10)
+
+                return (
+                  <div
+                    key={dateStr}
+                    className={`relative group bg-background min-h-[72px] p-1.5 flex flex-col gap-1 ${
+                      schedDay ? 'hover:bg-muted/40 transition-colors' : 'hover:bg-muted/20 transition-colors'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[11px] font-medium ${
+                        isToday
+                          ? 'size-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center'
+                          : 'text-muted-foreground'
+                      }`}>
+                        {day}
+                      </span>
+                      {scheduleId && accountId && !isStreaming && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setAddingPostDate(dateStr) }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+                          title="Adicionar post"
+                        >
+                          <Plus className="size-3" />
+                        </button>
+                      )}
+                    </div>
+                    {schedDay && (
+                      <div className="flex flex-col gap-0.5">
+                        {schedDay.posts.map((post, i) => {
+                          const type = safePostType(post.type)
+                          const Icon = TYPE_ICONS[type]
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => setSelected({ post, day: schedDay })}
+                              className={`flex items-center gap-1 text-[9px] px-1 py-0.5 rounded font-medium w-full text-left truncate ${TYPE_COLORS[type]}`}
+                            >
+                              <Icon className="size-2.5 shrink-0" />
+                              <span className="truncate">{post.time || ''} {post.theme}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-3 mt-3 justify-center flex-wrap">
+              {(Object.entries(TYPE_LABELS) as [PostType, string][]).map(([type, label]) => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className={`size-2 rounded-full ${TYPE_DOT_COLORS[type]}`} />
+                  <span className="text-[10px] text-muted-foreground">{label}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Post detail panel */}
+        {selected ? (
+          <PostDetailCard
+            key={`${selected.day.date}-${selected.post.type}-${selected.post.time ?? ''}-${selected.post.theme}`}
+            post={selected.post}
+            day={selected.day}
+            onClose={() => setSelected(null)}
+            scheduleId={scheduleId}
+            mediaEntry={mediaMap[`${selected.day.date}::${selected.post.theme}`] ?? null}
+            onMediaSaved={onMediaSaved}
+            onMediaGenerated={handleSessionMediaAdded}
+            onDeleted={() => {
+              const { day, post } = selected
+              const postId = mediaMap[`${day.date}::${post.theme}`]?.postId
+              setSelected(null)
+              if (postId) onPostDeleted?.(day.date, postId, post.theme)
+            }}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-center py-12 text-muted-foreground">
+            <Sparkles className="size-8 mb-3 opacity-30" />
+            <p className="text-sm font-medium">Selecione um post no calendário</p>
+            <p className="text-xs mt-1 opacity-70">para ver o briefing completo</p>
+          </div>
+        )}
+      </div>
+
+      {/* AddPostDialog */}
+      {addingPostDate && scheduleId && accountId && (
+        <AddPostDialog
+          open={true}
+          date={addingPostDate}
+          scheduleId={scheduleId}
+          accountId={accountId}
+          onClose={() => setAddingPostDate(null)}
+          onSaved={(post, postId) => {
+            const savedDate = addingPostDate
+            setAddingPostDate(null)
+            if (savedDate) onPostAdded?.(savedDate, post, postId)
+          }}
+        />
+      )}
+
+      {/* Gallery view below */}
+      <PostGallerySection
+        schedule={schedule}
+        mediaMap={mediaMap}
+        scheduleId={scheduleId}
+        accountConnected={accountConnected}
+        onMediaSaved={onMediaSaved}
+        onPostDeleted={onPostDeleted}
+        onSelectPost={(post, day) => setSelected({ post, day })}
+        sessionMedia={sessionMedia}
+        onSessionMediaAdded={handleSessionMediaAdded}
+      />
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PostGallerySection
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SessionMediaEntry {
+  src: string
+  mimeType: string
+}
+
+interface PostGallerySectionProps {
+  schedule: GeneratedSchedule
+  mediaMap: MediaMap
+  scheduleId?: string | null
+  accountConnected?: boolean
+  onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
+  onPostDeleted?: (date: string, postId: string, theme: string) => void
+  onSelectPost?: (post: SchedulePost, day: ScheduleDay) => void
+  sessionMedia: Record<string, SessionMediaEntry>
+  onSessionMediaAdded: (key: string, src: string, mimeType: string) => void
+}
+
+function PostGallerySection({
+  schedule,
+  mediaMap,
+  scheduleId,
+  accountConnected = false,
+  onMediaSaved,
+  onPostDeleted,
+  onSelectPost: _onSelectPost,
+  sessionMedia,
+  onSessionMediaAdded,
+}: PostGallerySectionProps) {
+  // Ref sempre atualizado com o scheduleId mais recente, evitando closure stale em uploadForPost
+  // (ex: save do cronograma chega após a geração de imagem ter começado)
+  const scheduleIdRef = useRef(scheduleId)
+  scheduleIdRef.current = scheduleId
+
+  const [expandedPost, setExpandedPost] = useState<{ day: ScheduleDay; post: SchedulePost } | null>(null)
+  const [approved, setApproved] = useState<Set<string>>(new Set())
+  const [bulkGenerating, setBulkGenerating] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0, label: '' })
+  const [generating, setGenerating] = useState<Set<string>>(new Set())
+  const [videoProgress, setVideoProgress] = useState<Record<string, string>>({})
+  const [confirmingDelete, setConfirmingDelete] = useState<{ key: string; day: ScheduleDay; post: SchedulePost } | null>(null)
+  const [deleting, setDeleting] = useState<Set<string>>(new Set())
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState({ done: 0, total: 0 })
+  const [publishing, setPublishing] = useState<Set<string>>(new Set())
+  const [publishedKeys, setPublishedKeys] = useState<Set<string>>(new Set())
+  const [publishErrors, setPublishErrors] = useState<Record<string, string>>({})
+
+  const allPosts = schedule.schedule.flatMap(day => day.posts.map(post => ({ day, post })))
+
+  // Auto-poll cron quando há posts planejados com horário vencido e conta conectada
+  useEffect(() => {
+    if (!accountConnected) return
+    const now = new Date()
+    const hasPending = allPosts.some(({ day, post }) => {
+      const key = `${day.date}::${post.theme}`
+      const mapEntry = mediaMap[key]
+      if (!mapEntry?.postId) return false
+      const timeStr = post.time ?? '00:00'
+      const scheduledAt = new Date(`${day.date}T${timeStr}:00`)
+      const hasMedia = mapEntry.imageUrl || mapEntry.videoUrl
+      return hasMedia && scheduledAt <= now && !publishedKeys.has(key)
+    })
+    if (!hasPending) return
+
+    const cronSecret = process.env.NEXT_PUBLIC_CRON_SECRET
+    if (!cronSecret) return
+
+    const interval = setInterval(async () => {
+      try {
+        await fetch(`/api/cron/publish-pending?secret=${encodeURIComponent(cronSecret)}`)
+      } catch { /* silencioso */ }
+    }, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountConnected, schedule.generated_at])
+
+  const approvedCount = approved.size
+
+  async function handlePublishNow(key: string, postId: string) {
+    setPublishing(prev => new Set(prev).add(key))
+    setPublishErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+    try {
+      const res = await fetch(`/api/instagram/publish/${postId}`, { method: 'POST' })
+      if (res.ok) {
+        setPublishedKeys(prev => new Set(prev).add(key))
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        setPublishErrors(prev => ({ ...prev, [key]: data.error ?? 'Erro ao publicar' }))
+      }
+    } catch {
+      setPublishErrors(prev => ({ ...prev, [key]: 'Erro de rede' }))
+    } finally {
+      setPublishing(prev => { const n = new Set(prev); n.delete(key); return n })
+    }
+  }
+
+  async function uploadForPost(
+    day: ScheduleDay,
+    post: SchedulePost,
+    base64: string,
+    mimeType: 'image/png' | 'image/jpeg' | 'video/mp4',
+    slideIndex?: number,
+  ) {
+    // Lê do ref para garantir o valor mais recente mesmo em closures assíncronos
+    const currentScheduleId = scheduleIdRef.current
+    if (!currentScheduleId) return
+    const key = `${day.date}::${post.theme}`
+    try {
+      let postId = mediaMap[key]?.postId
+      if (!postId) {
+        const lookupRes = await fetch(
+          `/api/schedule/post-id?scheduleId=${encodeURIComponent(currentScheduleId)}&date=${encodeURIComponent(day.date)}&theme=${encodeURIComponent(post.theme)}`
+        )
+        if (!lookupRes.ok) return
+        const data = await lookupRes.json() as { postId: string }
+        postId = data.postId
+      }
+      if (!postId) return
+      const body: Record<string, unknown> = {
+        postId,
+        mediaType: mimeType === 'video/mp4' ? 'video' : 'image',
+        data: base64,
+        mimeType,
+      }
+      if (slideIndex !== undefined) body.slideIndex = slideIndex
+      const uploadRes = await fetch('/api/media/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (uploadRes.ok) {
+        const { url } = await uploadRes.json() as { url: string }
+        const slideKey = slideIndex !== undefined ? `${key}::slide${slideIndex}` : key
+        onMediaSaved?.(slideKey, mimeType !== 'video/mp4' ? url : null, mimeType === 'video/mp4' ? url : null)
+        // Slide 0 also updates the main key for thumbnail
+        if (slideIndex === 0) {
+          onMediaSaved?.(key, url, null)
+        }
+      }
+    } catch (err) {
+      console.error('[PostGallery] upload falhou:', err)
+    }
+  }
+
+  async function generateForPost(day: ScheduleDay, post: SchedulePost) {
+    const key = `${day.date}::${post.theme}`
+    const type = safePostType(post.type)
+
+    setGenerating(prev => new Set(prev).add(key))
+
+    try {
+      if (type === 'reel') {
+        setVideoProgress(prev => ({ ...prev, [key]: 'Iniciando geração do vídeo...' }))
+        const res = await fetch('/api/media/generate-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
+        })
+        if (!res.ok || !res.body) throw new Error('Falha ao conectar')
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const parts = buf.split('\n\n')
+          buf = parts.pop() ?? ''
+          for (const part of parts) {
+            const line = part.replace(/^data: /, '').trim()
+            if (!line) continue
+            try {
+              const evt = JSON.parse(line) as { type: string; message?: string; videoData?: string; mimeType?: string }
+              if (evt.type === 'start' || evt.type === 'progress') {
+                setVideoProgress(prev => ({ ...prev, [key]: evt.message ?? '' }))
+              } else if (evt.type === 'complete' && evt.videoData) {
+                onSessionMediaAdded(key, evt.videoData!, 'video/mp4')
+                setVideoProgress(prev => { const n = { ...prev }; delete n[key]; return n })
+                uploadForPost(day, post, evt.videoData, 'video/mp4')
+              } else if (evt.type === 'error') {
+                throw new Error(evt.message ?? 'Erro ao gerar vídeo')
+              }
+            } catch {
+              // ignore parse errors on partial chunks
+            }
+          }
+        }
+      } else if (type === 'carousel') {
+        // Carrossel: gera TODOS os slides sequencialmente e persiste cada um
+        const slideCount = post.visual?.slides?.length ?? 1
+        for (let slideIdx = 0; slideIdx < slideCount; slideIdx++) {
+          try {
+            const res = await fetch('/api/media/generate-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt: buildCarouselSlidePrompt(post, slideIdx), aspectRatio: '4:5' }),
+            })
+            const data = await res.json()
+            if (!res.ok || data.error) continue
+            const mime = (data.mimeType as string) || 'image/jpeg'
+            onSessionMediaAdded(`${key}::slide${slideIdx}`, data.imageData as string, mime)
+            if (slideIdx === 0) onSessionMediaAdded(key, data.imageData as string, mime)
+            uploadForPost(day, post, data.imageData as string, mime as 'image/png' | 'image/jpeg', slideIdx)
+          } catch { /* ignora slide com falha individual */ }
+        }
+      } else if (type === 'story_sequence') {
+        // Sequência de stories: gera cada frame em 9:16 sequencialmente
+        const frameCount = post.visual?.slides?.length ?? 1
+        for (let frameIdx = 0; frameIdx < frameCount; frameIdx++) {
+          try {
+            const res = await fetch('/api/media/generate-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt: buildStorySequenceFramePrompt(post, frameIdx), aspectRatio: '9:16' }),
+            })
+            const data = await res.json()
+            if (!res.ok || data.error) continue
+            const mime = (data.mimeType as string) || 'image/jpeg'
+            onSessionMediaAdded(`${key}::slide${frameIdx}`, data.imageData as string, mime)
+            if (frameIdx === 0) onSessionMediaAdded(key, data.imageData as string, mime)
+            uploadForPost(day, post, data.imageData as string, mime as 'image/png' | 'image/jpeg', frameIdx)
+          } catch { /* ignora frame com falha individual */ }
+        }
+      } else {
+        const prompt = buildImagePrompt(post)
+        const aspectRatio = type === 'story' ? '9:16' : '1:1'
+        const res = await fetch('/api/media/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, aspectRatio }),
+        })
+        const data = await res.json()
+        if (!res.ok || data.error) throw new Error(data.error ?? 'Erro ao gerar imagem')
+        const mime = (data.mimeType as string) || 'image/jpeg'
+        onSessionMediaAdded(key, data.imageData as string, mime)
+        uploadForPost(day, post, data.imageData as string, mime as 'image/png' | 'image/jpeg')
+      }
+    } catch (err) {
+      console.error('[PostGallery] geração falhou para', key, err)
+      setVideoProgress(prev => { const n = { ...prev }; delete n[key]; return n })
+    } finally {
+      setGenerating(prev => { const n = new Set(prev); n.delete(key); return n })
+    }
+  }
+
+  async function handleBulkGenerate() {
+    const toGenerate = allPosts.filter(({ day, post }) => {
+      const key = `${day.date}::${post.theme}`
+      return !sessionMedia[key] && !mediaMap[key]?.imageUrl && !mediaMap[key]?.videoUrl
+    })
+    if (toGenerate.length === 0) return
+
+    setBulkGenerating(true)
+    setBulkProgress({ done: 0, total: toGenerate.length, label: '' })
+
+    // Process non-reels first, then reels
+    const nonReels = toGenerate.filter(({ post }) => safePostType(post.type) !== 'reel')
+    const reels = toGenerate.filter(({ post }) => safePostType(post.type) === 'reel')
+    const ordered = [...nonReels, ...reels]
+
+    for (let i = 0; i < ordered.length; i++) {
+      const { day, post } = ordered[i]
+      setBulkProgress({ done: i, total: ordered.length, label: post.theme })
+      await generateForPost(day, post)
+    }
+
+    setBulkProgress(prev => ({ ...prev, done: prev.total, label: '' }))
+    setBulkGenerating(false)
+  }
+
+  async function handleDeletePost(day: ScheduleDay, post: SchedulePost) {
+    const key = `${day.date}::${post.theme}`
+    setDeleting(prev => new Set(prev).add(key))
+    try {
+      // Resolve postId: from mediaMap first, then via API lookup
+      let postId: string | undefined = mediaMap[key]?.postId
+      const currentScheduleId = scheduleIdRef.current
+      if (!postId && currentScheduleId) {
+        const lookup = await fetch(
+          `/api/schedule/post-id?scheduleId=${encodeURIComponent(currentScheduleId)}&date=${encodeURIComponent(day.date)}&theme=${encodeURIComponent(post.theme)}`
+        )
+        if (lookup.ok) {
+          const data = await lookup.json() as { postId: string | null }
+          postId = data.postId ?? undefined
+        }
+      }
+      if (!postId) throw new Error('Post não encontrado no banco de dados')
+
+      const res = await fetch(`/api/schedule/posts/${postId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Erro ao excluir')
+      }
+      onPostDeleted?.(day.date, postId, post.theme)
+      setConfirmingDelete(null)
+    } catch (err) {
+      console.error('[PostGallery] delete falhou:', err)
+    } finally {
+      setDeleting(prev => { const n = new Set(prev); n.delete(key); return n })
+    }
+  }
+
+  function toggleSelection(key: string) {
+    setSelectedKeys(prev => {
+      const n = new Set(prev)
+      if (n.has(key)) n.delete(key); else n.add(key)
+      return n
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedKeys.size === allPosts.length) {
+      setSelectedKeys(new Set())
+    } else {
+      setSelectedKeys(new Set(allPosts.map(({ day, post }) => `${day.date}::${post.theme}`)))
+    }
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false)
+    setSelectedKeys(new Set())
+    setConfirmBulkDelete(false)
+  }
+
+  async function handleBulkDelete() {
+    const keys = Array.from(selectedKeys)
+    setBulkDeleting(true)
+    setBulkDeleteProgress({ done: 0, total: keys.length })
+    setConfirmBulkDelete(false)
+
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      const entry = allPosts.find(({ day, post }) => `${day.date}::${post.theme}` === key)
+      if (!entry) continue
+
+      const { day, post } = entry
+      try {
+        let postId: string | undefined = mediaMap[key]?.postId
+        const currentScheduleId = scheduleIdRef.current
+        if (!postId && currentScheduleId) {
+          const r = await fetch(`/api/schedule/post-id?scheduleId=${currentScheduleId}&date=${day.date}&theme=${encodeURIComponent(post.theme)}`)
+          if (r.ok) { const d = await r.json(); postId = d.postId }
+        }
+        if (!postId) continue
+
+        const res = await fetch(`/api/schedule/posts/${postId}`, { method: 'DELETE' })
+        if (res.ok) {
+          onPostDeleted?.(day.date, postId, post.theme)
+        }
+      } catch {
+        // Silently continue — partial failures are ok for bulk ops
+      }
+      setBulkDeleteProgress({ done: i + 1, total: keys.length })
+    }
+
+    setBulkDeleting(false)
+    exitSelectionMode()
+  }
+
+  const pendingCount = allPosts.filter(({ day, post }) => {
+    const key = `${day.date}::${post.theme}`
+    return !sessionMedia[key] && !mediaMap[key]?.imageUrl && !mediaMap[key]?.videoUrl
+  }).length
+
+  return (
+    <div className="space-y-3">
+      {/* Delete confirmation modal */}
+      {confirmingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background rounded-xl border shadow-xl p-5 max-w-sm w-full space-y-4">
+            <div>
+              <h4 className="font-semibold text-sm">Apagar post?</h4>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                O post <span className="font-medium text-foreground">&ldquo;{confirmingDelete.post.theme}&rdquo;</span> e toda a mídia gerada serão apagados permanentemente.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmingDelete(null)}
+                disabled={deleting.has(confirmingDelete.key)}
+                className="flex-1 py-2 rounded-lg border text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeletePost(confirmingDelete.day, confirmingDelete.post)}
+                disabled={deleting.has(confirmingDelete.key)}
+                className="flex-1 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {deleting.has(confirmingDelete.key) ? (
+                  <><Loader2 className="size-3.5 animate-spin" />Apagando...</>
+                ) : (
+                  <><Trash2 className="size-3.5" />Apagar</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk delete confirmation modal */}
+      {confirmBulkDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background rounded-xl border shadow-xl p-5 max-w-sm w-full space-y-4">
+            <div>
+              <h4 className="font-semibold text-sm">Apagar {selectedKeys.size} post{selectedKeys.size !== 1 ? 's' : ''}?</h4>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Os posts selecionados e toda a mídia gerada serão apagados permanentemente. Esta ação não pode ser desfeita.
+              </p>
+            </div>
+            {bulkDeleting && (
+              <div className="space-y-1.5">
+                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-destructive transition-all duration-300"
+                    style={{ width: bulkDeleteProgress.total > 0 ? `${(bulkDeleteProgress.done / bulkDeleteProgress.total) * 100}%` : '0%' }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">Apagando {bulkDeleteProgress.done}/{bulkDeleteProgress.total}...</p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmBulkDelete(false)}
+                disabled={bulkDeleting}
+                className="flex-1 py-2 rounded-lg border text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="flex-1 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {bulkDeleting
+                  ? <><Loader2 className="size-3.5 animate-spin" />Apagando...</>
+                  : <><Trash2 className="size-3.5" />Apagar tudo</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Todos os posts</h3>
+          {selectionMode && (
+            <span className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">{selectedKeys.size}</span> selecionado{selectedKeys.size !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {selectionMode ? (
+            <>
+              <button
+                onClick={toggleSelectAll}
+                className="text-xs text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border transition-colors"
+              >
+                {selectedKeys.size === allPosts.length ? 'Desmarcar todos' : 'Selecionar todos'}
+              </button>
+              {selectedKeys.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-8 gap-1.5 text-xs"
+                  disabled={bulkDeleting}
+                  onClick={() => setConfirmBulkDelete(true)}
+                >
+                  <Trash2 className="size-3" />
+                  Apagar {selectedKeys.size}
+                </Button>
+              )}
+              <button
+                onClick={exitSelectionMode}
+                className="text-xs text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border transition-colors"
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              {approvedCount > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-green-600">{approvedCount}</span>/{allPosts.length} aprovados
+                </span>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => setSelectionMode(true)}
+              >
+                <CheckCircle2 className="size-3" />
+                Selecionar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 text-xs"
+                disabled={bulkGenerating || pendingCount === 0}
+                onClick={handleBulkGenerate}
+              >
+                {bulkGenerating ? (
+                  <><Loader2 className="size-3 animate-spin" />Gerando {bulkProgress.done}/{bulkProgress.total}...</>
+                ) : (
+                  <><Sparkles className="size-3" />Gerar todas as mídias</>
+                )}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Bulk progress bar */}
+      {bulkGenerating && (
+        <div className="space-y-1.5">
+          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+              style={{ width: bulkProgress.total > 0 ? `${(bulkProgress.done / bulkProgress.total) * 100}%` : '0%' }}
+            />
+          </div>
+          {bulkProgress.label && (
+            <p className="text-[10px] text-muted-foreground truncate">
+              Gerando {bulkProgress.done + 1}/{bulkProgress.total}: {bulkProgress.label}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Modal expandido */}
+      {expandedPost && (
+        <PostExpandedModal
+          post={expandedPost.post}
+          day={expandedPost.day}
+          mediaKey={`${expandedPost.day.date}::${expandedPost.post.theme}`}
+          sessionMedia={sessionMedia}
+          onSessionMediaAdded={onSessionMediaAdded}
+          mediaEntry={mediaMap[`${expandedPost.day.date}::${expandedPost.post.theme}`] ?? null}
+          onMediaSaved={onMediaSaved}
+          scheduleId={scheduleId}
+          isApproved={approved.has(`${expandedPost.day.date}::${expandedPost.post.theme}`)}
+          onApproveToggle={() => {
+            const key = `${expandedPost.day.date}::${expandedPost.post.theme}`
+            setApproved(prev => {
+              const n = new Set(prev)
+              if (n.has(key)) n.delete(key); else n.add(key)
+              return n
+            })
+          }}
+          onDeleteRequest={() => {
+            const key = `${expandedPost.day.date}::${expandedPost.post.theme}`
+            setConfirmingDelete({ key, day: expandedPost.day, post: expandedPost.post })
+            setExpandedPost(null)
+          }}
+          onClose={() => setExpandedPost(null)}
+        />
+      )}
+
+      {/* Cards grid */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {allPosts.map(({ day, post }) => {
+          const key = `${day.date}::${post.theme}`
+          const type = safePostType(post.type)
+          const Icon = TYPE_ICONS[type]
+          const isGenerating = generating.has(key)
+          const isApproved = approved.has(key)
+          const isDeleting = deleting.has(key)
+          const isPublishing = publishing.has(key)
+          const mapEntry = mediaMap[key]
+          const sessionEntry = sessionMedia[key]
+          const isPublished = publishedKeys.has(key) || mapEntry?.status === 'published'
+          const publishError = publishErrors[key] ?? mapEntry?.publishError ?? null
+          const progress = videoProgress[key]
+
+          // Resolve thumbnail source
+          let thumbSrc: string | null = null
+          let thumbIsVideo = false
+          if (sessionEntry) {
+            thumbSrc = sessionEntry.mimeType === 'video/mp4'
+              ? `data:video/mp4;base64,${sessionEntry.src}`
+              : `data:${sessionEntry.mimeType};base64,${sessionEntry.src}`
+            thumbIsVideo = sessionEntry.mimeType === 'video/mp4'
+          } else if (mapEntry?.imageUrl) {
+            thumbSrc = mapEntry.imageUrl
+          } else if (mapEntry?.videoUrl) {
+            thumbSrc = mapEntry.videoUrl
+            thumbIsVideo = true
+          }
+
+          const hasMedia = thumbSrc !== null
+
+          const isSelected = selectedKeys.has(key)
+
+          return (
+            <div
+              key={key}
+              className={`rounded-xl border-2 overflow-hidden flex flex-col transition-colors ${
+                selectionMode && isSelected
+                  ? 'border-primary ring-2 ring-primary/30'
+                  : isApproved ? 'border-green-500' : 'border-border'
+              }`}
+            >
+              {/* Thumbnail area */}
+              <div
+                className="relative aspect-[4/5] bg-muted/30 cursor-pointer group/thumb"
+                onClick={() => {
+                  if (selectionMode) { toggleSelection(key); return }
+                  setExpandedPost({ day, post })
+                }}
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                      {progress && (
+                        <p className="text-[10px] text-muted-foreground text-center px-3 leading-snug">{progress}</p>
+                      )}
+                    </div>
+                  </>
+                ) : hasMedia ? (
+                  <>
+                    {thumbIsVideo ? (
+                      <video src={thumbSrc!} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={thumbSrc!} alt={post.theme} className="absolute inset-0 w-full h-full object-cover" />
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/20 transition-colors" />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground/40">
+                    <Icon className="size-8" />
+                    <span className="text-[10px] text-muted-foreground/50">{TYPE_LABELS[type]}</span>
+                  </div>
+                )}
+
+                {/* Selection checkbox */}
+                {selectionMode && (
+                  <div className={`absolute top-2 left-2 size-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    isSelected
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'bg-background/80 border-muted-foreground/50'
+                  }`}>
+                    {isSelected && (
+                      <svg viewBox="0 0 10 8" className="size-3 fill-current" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                )}
+
+                {/* Approved badge */}
+                {isApproved && !selectionMode && (
+                  <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-0.5">
+                    <CheckCircle2 className="size-3.5" />
+                  </div>
+                )}
+              </div>
+
+              {/* Info area */}
+              <div className="p-2.5 flex flex-col gap-1.5 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${TYPE_COLORS[type]}`}>
+                    <Icon className="size-2.5" />
+                    {TYPE_LABELS[type]}
+                  </span>
+                  {post.time && (
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                      <Clock className="size-2.5" />{post.time}
+                    </span>
+                  )}
+                  {/* Badges de publicação */}
+                  {isPublished && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 font-medium">
+                      Publicado
+                    </span>
+                  )}
+                  {publishError && !isPublished && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 font-medium" title={publishError}>
+                      Erro
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-medium leading-snug line-clamp-2 flex-1">{post.theme}</p>
+                <p className="text-[10px] text-muted-foreground">{day.day_label}</p>
+              </div>
+
+              {/* Action buttons — hidden in selection mode */}
+              <div className={`px-2 pb-2 flex items-center gap-1 ${selectionMode ? 'invisible' : ''}`}>
+                {/* Approve toggle */}
+                <button
+                  onClick={() => setApproved(prev => {
+                    const n = new Set(prev)
+                    if (n.has(key)) n.delete(key); else n.add(key)
+                    return n
+                  })}
+                  className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-medium py-1.5 rounded-lg transition-colors ${
+                    isApproved
+                      ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-500/20'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+                  }`}
+                  title={isApproved ? 'Remover aprovação' : 'Aprovar'}
+                >
+                  <CheckCircle2 className="size-3" />
+                  {isApproved ? 'Aprovado' : 'Aprovar'}
+                </button>
+
+                {/* Download */}
+                {hasMedia && (
+                  <button
+                    onClick={() => {
+                      const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
+                      const a = document.createElement('a')
+                      a.href = thumbSrc!
+                      a.download = thumbIsVideo ? `${slug}.mp4` : `${slug}.png`
+                      a.click()
+                    }}
+                    className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    title="Baixar mídia"
+                  >
+                    <Download className="size-3.5" />
+                  </button>
+                )}
+
+                {/* Regenerate */}
+                <button
+                  onClick={() => generateForPost(day, post)}
+                  disabled={isGenerating || bulkGenerating}
+                  className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Regenerar mídia"
+                >
+                  <RefreshCw className={`size-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+                </button>
+
+                {/* Publish now */}
+                {accountConnected && hasMedia && !isPublished && mapEntry?.postId && (
+                  <button
+                    onClick={() => handlePublishNow(key, mapEntry.postId)}
+                    disabled={isPublishing}
+                    className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Publicar agora no Instagram"
+                  >
+                    {isPublishing
+                      ? <Loader2 className="size-3.5 animate-spin" />
+                      : <Send className="size-3.5" />
+                    }
+                  </button>
+                )}
+
+                {/* Delete */}
+                <button
+                  onClick={() => setConfirmingDelete({ key, day, post })}
+                  disabled={!scheduleId || isDeleting}
+                  className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title={scheduleId ? 'Apagar post' : 'Salve o cronograma para apagar posts'}
+                >
+                  {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PostExpandedModal — modal completo ao clicar num post da galeria
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PostExpandedModal({
+  post,
+  day,
+  mediaKey,
+  sessionMedia,
+  onSessionMediaAdded,
+  mediaEntry,
+  onMediaSaved,
+  scheduleId,
+  isApproved,
+  onApproveToggle,
+  onDeleteRequest,
+  onClose,
+}: {
+  post: SchedulePost
+  day: ScheduleDay
+  mediaKey: string
+  sessionMedia: Record<string, SessionMediaEntry>
+  onSessionMediaAdded: (key: string, src: string, mimeType: string) => void
+  mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string } | null
+  onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
+  scheduleId?: string | null
+  isApproved: boolean
+  onApproveToggle: () => void
+  onDeleteRequest: () => void
+  onClose: () => void
+}) {
+  const type = safePostType(post.type)
+  const Icon = TYPE_ICONS[type]
+  const isCarousel = type === 'carousel'
+  const isStorySeq = type === 'story_sequence'
+  const isMultiFrameModal = isCarousel || isStorySeq
+  const carouselSlideCount = post.visual?.slides?.length ?? 0
+
+  const [activeSlide, setActiveSlide] = useState(0)
+  const [generating, setGenerating] = useState(false)
+  const [generatingSlide, setGeneratingSlide] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [videoProgress, setVideoProgress] = useState<string | null>(null)
+
+  const scheduleIdRef = useRef(scheduleId)
+  scheduleIdRef.current = scheduleId
+
+  // Upload silencioso após gerar
+  async function uploadMedia(base64: string, mimeType: 'image/png' | 'image/jpeg' | 'video/mp4') {
+    const currentScheduleId = scheduleIdRef.current
+    if (!currentScheduleId) return
+    try {
+      let postId = mediaEntry?.postId
+      if (!postId) {
+        const res = await fetch(
+          `/api/schedule/post-id?scheduleId=${encodeURIComponent(currentScheduleId)}&date=${encodeURIComponent(day.date)}&theme=${encodeURIComponent(post.theme)}`
+        )
+        if (!res.ok) return
+        const data = await res.json() as { postId: string }
+        postId = data.postId
+      }
+      if (!postId) return
+      const uploadRes = await fetch('/api/media/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, mediaType: mimeType === 'video/mp4' ? 'video' : 'image', data: base64, mimeType }),
+      })
+      if (uploadRes.ok) {
+        const { url } = await uploadRes.json() as { url: string }
+        onMediaSaved?.(mediaKey, mimeType !== 'video/mp4' ? url : null, mimeType === 'video/mp4' ? url : null)
+      }
+    } catch { /* silencioso */ }
+  }
+
+  // Gera um slide/frame específico
+  async function generateSlide(slideIdx: number) {
+    setGeneratingSlide(slideIdx)
+    setError(null)
+    try {
+      const framePrompt = isStorySeq
+        ? buildStorySequenceFramePrompt(post, slideIdx)
+        : buildCarouselSlidePrompt(post, slideIdx)
+      const frameAspect = isStorySeq ? '9:16' : '4:5'
+      const res = await fetch('/api/media/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: framePrompt, aspectRatio: frameAspect }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error ?? 'Erro ao gerar frame')
+      const slideKey = `${mediaKey}::slide${slideIdx}`
+      onSessionMediaAdded(slideKey, data.imageData as string, 'image/png')
+      if (slideIdx === 0) {
+        onSessionMediaAdded(mediaKey, data.imageData as string, 'image/png')
+        uploadMedia(data.imageData as string, 'image/png')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao gerar frame')
+    } finally {
+      setGeneratingSlide(null)
+    }
+  }
+
+  // Gera todos os slides sequencialmente
+  async function generateAllSlides() {
+    setGenerating(true)
+    setError(null)
+    for (let i = 0; i < carouselSlideCount; i++) {
+      await generateSlide(i)
+    }
+    setGenerating(false)
+  }
+
+  // Gera mídia principal (post / story / reel)
+  async function generateMain() {
+    setGenerating(true)
+    setError(null)
+    try {
+      if (type === 'reel') {
+        setVideoProgress('Iniciando geração do vídeo...')
+        const res = await fetch('/api/media/generate-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
+        })
+        if (!res.ok || !res.body) throw new Error('Falha ao conectar')
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const parts = buf.split('\n\n')
+          buf = parts.pop() ?? ''
+          for (const part of parts) {
+            const line = part.replace(/^data: /, '').trim()
+            if (!line) continue
+            try {
+              const evt = JSON.parse(line) as { type: string; message?: string; videoData?: string }
+              if (evt.type === 'start' || evt.type === 'progress') {
+                setVideoProgress(evt.message ?? '')
+              } else if (evt.type === 'complete' && evt.videoData) {
+                onSessionMediaAdded(mediaKey, evt.videoData, 'video/mp4')
+                setVideoProgress(null)
+                uploadMedia(evt.videoData, 'video/mp4')
+              } else if (evt.type === 'error') {
+                throw new Error(evt.message ?? 'Erro ao gerar vídeo')
+              }
+            } catch { /* ignore parse errors */ }
+          }
+        }
+      } else {
+        const aspectRatio = type === 'story' ? '9:16' : '1:1'
+        const res = await fetch('/api/media/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: buildImagePrompt(post), aspectRatio }),
+        })
+        const data = await res.json()
+        if (!res.ok || data.error) throw new Error(data.error ?? 'Erro ao gerar imagem')
+        const mime = (data.mimeType as string) || 'image/jpeg'
+        onSessionMediaAdded(mediaKey, data.imageData as string, mime)
+        uploadMedia(data.imageData as string, mime as 'image/png' | 'image/jpeg')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao gerar')
+      setVideoProgress(null)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  // Resolve fonte de imagem de um slide
+  function getSlideImage(idx: number): string | null {
+    const slideKey = `${mediaKey}::slide${idx}`
+    const slideEntry = sessionMedia[slideKey]
+    if (slideEntry) return `data:${slideEntry.mimeType};base64,${slideEntry.src}`
+    // Slide 0 fallback: chave principal
+    if (idx === 0) {
+      const main = sessionMedia[mediaKey]
+      if (main && main.mimeType !== 'video/mp4') return `data:${main.mimeType};base64,${main.src}`
+      if (mediaEntry?.imageUrl) return mediaEntry.imageUrl
+    }
+    return null
+  }
+
+  // Resolve mídia principal (não-carrossel)
+  const mainEntry = sessionMedia[mediaKey]
+  let mainSrc: string | null = null
+  let mainIsVideo = false
+  if (mainEntry) {
+    mainSrc = `data:${mainEntry.mimeType};base64,${mainEntry.src}`
+    mainIsVideo = mainEntry.mimeType === 'video/mp4'
+  } else if (mediaEntry?.imageUrl) {
+    mainSrc = mediaEntry.imageUrl
+  } else if (mediaEntry?.videoUrl) {
+    mainSrc = mediaEntry.videoUrl
+    mainIsVideo = true
+  }
+
+  function handleDownloadMain() {
+    if (!mainSrc) return
+    const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
+    const a = document.createElement('a')
+    a.href = mainSrc
+    a.download = mainIsVideo ? `${slug}.mp4` : `${slug}.png`
+    a.click()
+  }
+
+  function handleDownloadSlide(idx: number) {
+    const src = getSlideImage(idx)
+    if (!src) return
+    const slug = post.theme.slice(0, 30).replace(/\s+/g, '-')
+    const a = document.createElement('a')
+    a.href = src
+    a.download = `${slug}-slide-${idx + 1}.png`
+    a.click()
+  }
+
+  const currentSlideImg = isMultiFrameModal ? getSlideImage(activeSlide) : null
+  const hasMedia = isMultiFrameModal ? currentSlideImg !== null : mainSrc !== null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className={`bg-background rounded-2xl border shadow-2xl w-full max-h-[92vh] flex flex-col overflow-hidden ${isMultiFrameModal ? 'max-w-5xl' : 'max-w-4xl'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${TYPE_COLORS[type]}`}>
+              <Icon className="size-3.5" />
+              {TYPE_LABELS[type]}
+            </span>
+            {post.time && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="size-3" />{post.time}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">{day.day_label}</span>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors ml-3 shrink-0">
+            <X className="size-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-hidden min-h-0">
+          <div className="grid lg:grid-cols-[1fr_320px] h-full">
+
+            {/* Left: Mídia */}
+            <div className={`flex flex-col gap-3 p-5 border-r ${isMultiFrameModal ? 'overflow-hidden h-full' : 'overflow-y-auto'}`}>
+              <div>
+                <h3 className="font-semibold text-base leading-snug">{post.theme}</h3>
+                {post.content_pillar && (
+                  <span className="text-[10px] text-muted-foreground mt-0.5 inline-block">{post.content_pillar}</span>
+                )}
+              </div>
+
+              {/* Carrossel / Sequência de Stories — visualizador de frames */}
+              {isMultiFrameModal && carouselSlideCount > 0 ? (
+                <div className="flex flex-col gap-3 flex-1 min-h-0">
+                  {/* Viewer principal do slide ativo */}
+                  <div className="relative bg-muted/30 rounded-xl overflow-hidden flex-1 min-h-0" style={{ minHeight: '320px' }}>
+                    {generatingSlide === activeSlide ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Gerando {isStorySeq ? 'frame' : 'slide'} {activeSlide + 1}...</p>
+                      </div>
+                    ) : currentSlideImg ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={currentSlideImg} alt={`Slide ${activeSlide + 1}`} className="absolute inset-0 w-full h-full object-contain" />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground/40 p-6 text-center">
+                        <Images className="size-12" />
+                        <p className="text-[11px] text-muted-foreground/70 leading-snug max-w-[240px]">
+                          {post.visual?.slides?.[activeSlide]?.image_description ?? 'Slide não gerado'}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Setas de navegação */}
+                    {carouselSlideCount > 1 && (
+                      <>
+                        <button
+                          onClick={() => setActiveSlide(s => Math.max(0, s - 1))}
+                          disabled={activeSlide === 0}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 size-9 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
+                        >
+                          <ChevronLeft className="size-5" />
+                        </button>
+                        <button
+                          onClick={() => setActiveSlide(s => Math.min(carouselSlideCount - 1, s + 1))}
+                          disabled={activeSlide === carouselSlideCount - 1}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 size-9 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
+                        >
+                          <ChevronRight className="size-5" />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Contador */}
+                    <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                      {activeSlide + 1}/{carouselSlideCount}
+                    </div>
+                  </div>
+
+                  {/* Info do slide ativo */}
+                  {post.visual?.slides?.[activeSlide] && (
+                    <div className="bg-muted/30 rounded-lg p-3 shrink-0">
+                      <p className="text-xs font-semibold">{post.visual.slides[activeSlide].headline}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                        {post.visual.slides[activeSlide].description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Faixa de thumbnails — todos os slides visíveis */}
+                  <div className="shrink-0">
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-wide mb-1.5">{isStorySeq ? 'Todos os frames' : 'Todos os slides'}</p>
+                    <div className="overflow-x-auto pb-1">
+                      <div className="flex gap-2">
+                        {Array.from({ length: carouselSlideCount }).map((_, i) => {
+                          const img = getSlideImage(i)
+                          const isActive = i === activeSlide
+                          const isGen = generatingSlide === i
+                          const frameLabel = isStorySeq ? 'Frame' : 'Slide'
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => setActiveSlide(i)}
+                              className={`relative shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                                isActive
+                                  ? 'border-primary ring-2 ring-primary/30'
+                                  : img
+                                    ? 'border-border hover:border-primary/60'
+                                    : 'border-dashed border-muted-foreground/30 hover:border-primary/40'
+                              }`}
+                              style={{ width: isStorySeq ? '42px' : '52px', aspectRatio: isStorySeq ? '9/16' : '4/5' }}
+                              title={`${frameLabel} ${i + 1}${img ? '' : ' — não gerado'}`}
+                            >
+                              {isGen ? (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                                  <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                                </div>
+                              ) : img ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={img} alt={`${frameLabel} ${i + 1}`} className="absolute inset-0 w-full h-full object-cover" />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted/20">
+                                  <span className="text-[9px] font-bold text-muted-foreground/50">{i + 1}</span>
+                                </div>
+                              )}
+                              {/* Badge com número */}
+                              <div className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[8px] px-1 rounded leading-tight">
+                                {i + 1}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ações do slide */}
+                  <div className="flex gap-2 shrink-0">
+                    {currentSlideImg && (
+                      <Button size="sm" variant="outline" className="gap-1.5 h-8 shrink-0" onClick={() => handleDownloadSlide(activeSlide)}>
+                        <Download className="size-3.5" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant={currentSlideImg ? 'outline' : 'default'}
+                      className="flex-1 gap-1.5 h-8"
+                      disabled={generatingSlide !== null || generating}
+                      onClick={() => generateSlide(activeSlide)}
+                    >
+                      {generatingSlide === activeSlide
+                        ? <><Loader2 className="size-3.5 animate-spin" />Gerando slide {activeSlide + 1}...</>
+                        : <><Sparkles className="size-3.5" />{currentSlideImg ? 'Regerar slide' : 'Gerar este slide'}</>
+                      }
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 h-8 shrink-0"
+                      disabled={generatingSlide !== null || generating}
+                      onClick={generateAllSlides}
+                      title="Gerar todos os slides"
+                    >
+                      {generating
+                        ? <><Loader2 className="size-3.5 animate-spin" />Gerando...</>
+                        : <><Sparkles className="size-3.5" />Gerar todos</>
+                      }
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Não-carrossel: imagem/vídeo */
+                <div className="space-y-3">
+                  <div className={`relative bg-muted/30 rounded-xl overflow-hidden ${
+                    type === 'story' ? 'aspect-[9/16] max-h-[55vh]' :
+                    type === 'reel' ? 'aspect-video' : 'aspect-square max-h-[55vh]'
+                  }`}>
+                    {generating && !mainIsVideo ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : mainSrc ? (
+                      mainIsVideo ? (
+                        <video src={mainSrc} controls className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={mainSrc} alt={post.theme} className="absolute inset-0 w-full h-full object-cover" />
+                      )
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground/40">
+                        <Icon className="size-12" />
+                        <span className="text-sm">{TYPE_LABELS[type]}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {videoProgress && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg p-3">
+                      <Loader2 className="size-3 animate-spin shrink-0" />
+                      <span>{videoProgress}</span>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    {mainSrc && (
+                      <Button size="sm" variant="outline" className="gap-1.5 h-8 shrink-0" onClick={handleDownloadMain}>
+                        <Download className="size-3.5" />
+                        Baixar
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant={mainSrc ? 'outline' : 'default'}
+                      className="flex-1 gap-1.5 h-8"
+                      disabled={generating}
+                      onClick={generateMain}
+                    >
+                      {generating
+                        ? <><Loader2 className="size-3.5 animate-spin" />{type === 'reel' ? 'Gerando vídeo...' : 'Gerando...'}</>
+                        : <><Sparkles className="size-3.5" />{mainSrc ? 'Gerar novamente' : type === 'reel' ? 'Gerar vídeo' : 'Gerar imagem'}</>
+                      }
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <p className="text-xs text-destructive bg-destructive/10 rounded-lg p-3">{error}</p>
+              )}
+            </div>
+
+            {/* Right: Informações do post */}
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {post.caption && (
+                <div className="bg-muted/40 rounded-lg p-3">
+                  <p className="text-[10px] font-medium uppercase text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <Type className="size-3" /> Legenda
+                  </p>
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{post.caption}</p>
+                </div>
+              )}
+
+              {post.visual && (
+                <div className="space-y-3">
+                  <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+                    <Palette className="size-3" /> Briefing Visual
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {post.visual.color_palette.map((hex, i) => (
+                      <div key={i} className="flex flex-col items-center gap-1">
+                        <div className="size-7 rounded-lg border border-black/10 shadow-sm" style={{ backgroundColor: hex }} />
+                        <span className="text-[9px] font-mono text-muted-foreground">{hex}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+                    <p className="text-xs font-bold">{post.visual.headline}</p>
+                    {post.visual.subline && (
+                      <p className="text-[11px] text-muted-foreground">{post.visual.subline}</p>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground bg-muted/30 rounded-lg p-2.5 leading-relaxed">
+                    {post.visual.image_description}
+                  </p>
+                </div>
+              )}
+
+              {post.script && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+                    <Clapperboard className="size-3" /> Roteiro · {post.script.duration}
+                  </p>
+                  <div className="bg-pink-50 dark:bg-pink-950/30 rounded-lg p-3 border border-pink-100 dark:border-pink-900">
+                    <p className="text-[10px] font-medium text-pink-600 dark:text-pink-400 mb-1">Hook</p>
+                    <p className="text-xs font-semibold italic">&ldquo;{post.script.hook}&rdquo;</p>
+                  </div>
+                  <div className="space-y-2">
+                    {post.script.scenes.map((scene, i) => (
+                      <div key={i} className="flex gap-2">
+                        <div className="shrink-0 size-6 rounded-full bg-muted flex items-center justify-center">
+                          <span className="text-[9px] font-bold text-muted-foreground">{i + 1}</span>
+                        </div>
+                        <div className="flex-1 bg-muted/30 rounded-lg p-2 space-y-1">
+                          <p className="text-[10px] text-muted-foreground">Visual</p>
+                          <p className="text-xs">{scene.visual}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Narração</p>
+                          <p className="text-xs text-muted-foreground">{scene.narration}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-muted/40 rounded-lg p-3">
+                    <p className="text-[10px] text-muted-foreground mb-1">CTA final</p>
+                    <p className="text-xs font-medium">{post.script.cta}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t flex items-center gap-2 shrink-0 bg-background">
+          <button
+            onClick={onApproveToggle}
+            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg transition-colors ${
+              isApproved
+                ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-500/20'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+            }`}
+          >
+            <CheckCircle2 className="size-3.5" />
+            {isApproved ? 'Aprovado' : 'Aprovar'}
+          </button>
+
+          {hasMedia && (
+            <button
+              onClick={isMultiFrameModal ? () => handleDownloadSlide(activeSlide) : handleDownloadMain}
+              className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-4 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-transparent"
+            >
+              <Download className="size-3.5" />
+              Baixar
+            </button>
+          )}
+
+          <button
+            onClick={onDeleteRequest}
+            className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-4 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors border border-transparent"
+          >
+            <Trash2 className="size-3.5" />
+            Apagar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildImagePrompt(post: SchedulePost): string {
+  const v = post.visual
+  if (!v) return `${post.theme}. ${post.caption ?? ''}`
+  return [
+    `${v.image_description}.`,
+    `Headline: "${v.headline}".`,
+    v.subline ? `Subline: "${v.subline}".` : '',
+    `Color palette: ${v.color_palette.join(', ')}.`,
+    `Background: ${v.background}.`,
+    `Style: professional social media ${post.type} for Instagram.`,
+  ].filter(Boolean).join(' ')
+}
+
+function buildCarouselSlidePrompt(post: SchedulePost, slideIdx: number): string {
+  const v = post.visual
+  const slide = v?.slides?.[slideIdx]
+  if (!slide || !v) return buildImagePrompt(post)
+  return [
+    `${slide.image_description}.`,
+    `Slide ${slide.slide_number} de carrossel Instagram.`,
+    `Headline do slide: "${slide.headline}".`,
+    `Conteúdo do slide: "${slide.description}".`,
+    `Color palette: ${v.color_palette.join(', ')}.`,
+    `Background: ${v.background}.`,
+    `Style: professional social media carousel slide for Instagram, 4:5 ratio.`,
+  ].filter(Boolean).join(' ')
+}
+
+function buildStorySequenceFramePrompt(post: SchedulePost, frameIdx: number): string {
+  const v = post.visual
+  const frame = v?.slides?.[frameIdx]
+  if (!frame || !v) return buildImagePrompt(post)
+  return [
+    `${frame.image_description}.`,
+    `Frame ${frame.slide_number} de sequência de stories Instagram, formato vertical 9:16.`,
+    `Headline: "${frame.headline}".`,
+    `Conteúdo: "${frame.description}".`,
+    `Color palette: ${v.color_palette.join(', ')}.`,
+    `Background: ${v.background}.`,
+    `Style: professional Instagram story, vertical 9:16 aspect ratio, full bleed design.`,
+  ].filter(Boolean).join(' ')
+}
+
+function buildVideoPrompt(post: SchedulePost): string {
+  const s = post.script
+  if (!s) return `${post.theme}. ${post.caption ?? ''}`
+  return [
+    `Instagram Reel video, ${s.duration}.`,
+    `Hook: "${s.hook}".`,
+    s.scenes.map((sc, i) => `Scene ${i + 1} (${sc.time}): ${sc.visual}. ${sc.narration}`).join(' '),
+    `Call to action: ${s.cta}.`,
+    `Theme: ${post.theme}.`,
+  ].join(' ')
+}
+
+function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSaved, onDeleted, onMediaGenerated }: {
+  post: SchedulePost
+  day: ScheduleDay
+  onClose: () => void
+  scheduleId?: string | null
+  mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string } | null
+  onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
+  onDeleted?: () => void
+  onMediaGenerated?: (key: string, src: string, mimeType: string) => void
+}) {
+  const type = safePostType(post.type)
+  const Icon = TYPE_ICONS[type]
+  const mediaKey = `${day.date}::${post.theme}`
+
+  const isImageType = type === 'post' || type === 'carousel' || type === 'story' || type === 'story_sequence'
+  const isCarousel = type === 'carousel'
+  const isStorySequence = type === 'story_sequence'
+  const isMultiFrame = isCarousel || isStorySequence
+  const carouselSlideCount = post.visual?.slides?.length ?? 0
+
+  // Base64 state (just generated this session)
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null)
+  const [generatedImageMime, setGeneratedImageMime] = useState<string>('image/jpeg')
+  // Carousel / story_sequence: one entry per slide (null = not yet generated)
+  const [carouselSlideImages, setCarouselSlideImages] = useState<(string | null)[]>(
+    () => Array(carouselSlideCount).fill(null)
+  )
+  const [carouselSlideGenerating, setCarouselSlideGenerating] = useState<boolean[]>(
+    () => Array(carouselSlideCount).fill(false)
+  )
+  const [generatedVideo, setGeneratedVideo] = useState<string | null>(null)
+  const [mediaGenerating, setMediaGenerating] = useState(false)
+  const [mediaError, setMediaError] = useState<string | null>(null)
+  const [videoProgress, setVideoProgress] = useState<string | null>(null)
+  const [imageProgress, setImageProgress] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const scheduleIdRef = useRef(scheduleId)
+  scheduleIdRef.current = scheduleId
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [generatingAll, setGeneratingAll] = useState(false)
+
+  async function handleDelete() {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Erro ao excluir')
+      }
+      onDeleted?.()
+    } catch (err) {
+      setDeleting(false)
+      setConfirmDelete(false)
+      console.error('[handleDelete]', err)
+    }
+  }
+
+  async function handleGenerateAllSlides() {
+    setGeneratingAll(true)
+    setMediaError(null)
+    for (let idx = 0; idx < carouselSlideCount; idx++) {
+      await handleGenerateCarouselSlide(idx)
+    }
+    setGeneratingAll(false)
+  }
+
+  function downloadSlide(base64: string, index: number) {
+    const slug = post.theme.slice(0, 30).replace(/\s+/g, '-')
+    const a = document.createElement('a')
+    a.href = `data:image/png;base64,${base64}`
+    a.download = `${slug}-slide-${index + 1}.png`
+    a.click()
+  }
+
+  async function handleDownloadAllSlides() {
+    const generated = carouselSlideImages.filter(Boolean)
+    if (generated.length === 0) return
+
+    if (generated.length === 1) {
+      downloadSlide(generated[0]!, carouselSlideImages.indexOf(generated[0]))
+      return
+    }
+
+    const JSZip = (await import('jszip')).default
+    const zip = new JSZip()
+    const slug = post.theme.slice(0, 30).replace(/\s+/g, '-')
+
+    carouselSlideImages.forEach((img, idx) => {
+      if (!img) return
+      zip.file(`${slug}-slide-${idx + 1}.png`, img, { base64: true })
+    })
+
+    const blob = await zip.generateAsync({ type: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${slug}-carrossel.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Simula progresso enquanto gera imagem (API não emite streaming)
+  useEffect(() => {
+    if (!mediaGenerating || !isImageType) {
+      if (!mediaGenerating && imageProgress > 0) setImageProgress(0)
+      return
+    }
+    setImageProgress(0)
+    const interval = setInterval(() => {
+      setImageProgress(prev => {
+        // Desacelera conforme se aproxima de 90%
+        if (prev >= 90) return prev
+        const step = prev < 30 ? 3 : prev < 60 ? 2 : 0.8
+        return Math.min(prev + step, 90)
+      })
+    }, 300)
+    return () => clearInterval(interval)
+  }, [mediaGenerating, isImageType]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const imageProgressLabel =
+    imageProgress < 25 ? 'Interpretando prompt...' :
+    imageProgress < 55 ? 'Compondo a imagem...' :
+    imageProgress < 80 ? 'Refinando detalhes...' :
+    'Finalizando...'
+
+  const aspectRatioClass =
+    type === 'story' || type === 'story_sequence' ? 'aspect-[9/16]' :
+    type === 'carousel' ? 'aspect-[4/5]' :
+    'aspect-square'
+
+  // Resolved display: prefer fresh base64, fall back to persisted URL
+  const displayImageSrc = generatedImage
+    ? `data:${generatedImageMime};base64,${generatedImage}`
+    : mediaEntry?.imageUrl ?? null
+  const displayVideoSrc = generatedVideo
+    ? `data:video/mp4;base64,${generatedVideo}`
+    : mediaEntry?.videoUrl ?? null
+
+  /** After generating media, upload to Storage and update schedule_posts record */
+  async function uploadMediaToStorage(
+    base64: string,
+    mimeType: 'image/png' | 'image/jpeg' | 'video/mp4',
+    slideIndex?: number,
+  ) {
+    const currentScheduleId = scheduleIdRef.current
+    if (!currentScheduleId) {
+      console.warn('[uploadMediaToStorage] scheduleId ausente — upload ignorado')
+      return
+    }
+
+    try {
+      // Use postId from mediaEntry if available, otherwise look it up
+      let postId = mediaEntry?.postId
+      if (!postId) {
+        const lookupRes = await fetch(
+          `/api/schedule/post-id?scheduleId=${encodeURIComponent(currentScheduleId)}&date=${encodeURIComponent(day.date)}&theme=${encodeURIComponent(post.theme)}`
+        )
+        if (!lookupRes.ok) return
+        const data = await lookupRes.json() as { postId: string }
+        postId = data.postId
+      }
+      if (!postId) return
+
+      const body: Record<string, unknown> = {
+        postId,
+        mediaType: mimeType === 'video/mp4' ? 'video' : 'image',
+        data: base64,
+        mimeType,
+      }
+      if (slideIndex !== undefined) body.slideIndex = slideIndex
+
+      const uploadRes = await fetch('/api/media/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (uploadRes.ok) {
+        const { url } = await uploadRes.json() as { url: string }
+        if (onMediaSaved) {
+          const targetKey = slideIndex !== undefined ? `${mediaKey}::slide${slideIndex}` : mediaKey
+          onMediaSaved(targetKey, mimeType !== 'video/mp4' ? url : null, mimeType === 'video/mp4' ? url : null)
+          // Slide 0 also updates main key for thumbnail
+          if (slideIndex === 0) onMediaSaved(mediaKey, url, null)
+        }
+      } else {
+        const errBody = await uploadRes.json().catch(() => ({}))
+        console.error('[uploadMediaToStorage] HTTP', uploadRes.status, errBody)
+      }
+    } catch (err) {
+      // Upload failure é silencioso na UI — imagem ainda visível pelo base64
+      console.error('[uploadMediaToStorage] falha:', err)
+    }
+  }
+
+  async function handleGenerateImage() {
+    setMediaGenerating(true)
+    setMediaError(null)
+    setGeneratedImage(null)
+    try {
+      const res = await fetch('/api/media/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: buildImagePrompt(post),
+          aspectRatio: type === 'story' ? '9:16' : type === 'carousel' ? '4:5' : '1:1',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error ?? 'Erro ao gerar imagem')
+      const mime = (data.mimeType as string) || 'image/jpeg'
+      setGeneratedImage(data.imageData)
+      setGeneratedImageMime(mime)
+      onMediaGenerated?.(mediaKey, data.imageData as string, mime)
+      await uploadMediaToStorage(data.imageData as string, mime as 'image/png' | 'image/jpeg' | 'video/mp4')
+    } catch (err) {
+      setMediaError(err instanceof Error ? err.message : 'Erro ao gerar imagem')
+    } finally {
+      setMediaGenerating(false)
+    }
+  }
+
+  async function handleGenerateCarouselSlide(slideIdx: number) {
+    setCarouselSlideGenerating(prev => prev.map((v, i) => i === slideIdx ? true : v))
+    setMediaError(null)
+    try {
+      const framePrompt = isStorySequence
+        ? buildStorySequenceFramePrompt(post, slideIdx)
+        : buildCarouselSlidePrompt(post, slideIdx)
+      const frameAspect = isStorySequence ? '9:16' : '4:5'
+      const res = await fetch('/api/media/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: framePrompt,
+          aspectRatio: frameAspect,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error ?? 'Erro ao gerar frame')
+      setCarouselSlideImages(prev => prev.map((v, i) => i === slideIdx ? (data.imageData as string) : v))
+      onMediaGenerated?.(`${mediaKey}::slide${slideIdx}`, data.imageData as string, 'image/png')
+      if (slideIdx === 0) onMediaGenerated?.(mediaKey, data.imageData as string, 'image/png')
+      await uploadMediaToStorage(data.imageData as string, 'image/png', slideIdx)
+    } catch (err) {
+      setMediaError(err instanceof Error ? err.message : 'Erro ao gerar slide')
+    } finally {
+      setCarouselSlideGenerating(prev => prev.map((v, i) => i === slideIdx ? false : v))
+    }
+  }
+
+  async function handleGenerateVideo() {
+    setMediaGenerating(true)
+    setMediaError(null)
+    setGeneratedVideo(null)
+    setVideoProgress('Iniciando geração do vídeo...')
+
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+
+    try {
+      const res = await fetch('/api/media/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
+        signal: ctrl.signal,
+      })
+      if (!res.ok || !res.body) throw new Error('Falha ao conectar ao servidor')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const parts = buf.split('\n\n')
+        buf = parts.pop() ?? ''
+        for (const part of parts) {
+          const line = part.replace(/^data: /, '').trim()
+          if (!line) continue
+          try {
+            const evt = JSON.parse(line) as { type: string; message?: string; videoData?: string; mimeType?: string }
+            if (evt.type === 'start' || evt.type === 'progress') {
+              setVideoProgress(evt.message ?? null)
+            } else if (evt.type === 'complete' && evt.videoData) {
+              setGeneratedVideo(evt.videoData)
+              setVideoProgress(null)
+              onMediaGenerated?.(mediaKey, evt.videoData, 'video/mp4')
+              uploadMediaToStorage(evt.videoData, 'video/mp4')
+            } else if (evt.type === 'error') {
+              throw new Error(evt.message ?? 'Erro ao gerar vídeo')
+            }
+          } catch {
+            // ignore parse errors on partial chunks
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        setMediaError(err instanceof Error ? err.message : 'Erro ao gerar vídeo')
+      }
+      setVideoProgress(null)
+    } finally {
+      setMediaGenerating(false)
+    }
+  }
+
+  function handleDownload() {
+    const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
+    if (displayImageSrc) {
+      const a = document.createElement('a')
+      a.href = displayImageSrc
+      a.download = `${slug}.png`
+      a.click()
+    } else if (displayVideoSrc) {
+      const a = document.createElement('a')
+      a.href = displayVideoSrc
+      a.download = `${slug}.mp4`
+      a.click()
+    }
+  }
+
+  return (
+    <Card className="sticky top-6 overflow-hidden">
+      <div className="px-4 py-3 border-b flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${TYPE_COLORS[type]}`}>
+            <Icon className="size-3" />
+            {TYPE_LABELS[type]}
+          </span>
+          {post.time && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="size-3" />{post.time}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {mediaEntry?.postId && (
+            confirmDelete ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-input transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-[10px] text-destructive hover:text-destructive/80 px-2 py-1 rounded border border-destructive/40 bg-destructive/5 transition-colors flex items-center gap-1"
+                >
+                  {deleting ? <Loader2 className="size-2.5 animate-spin" /> : null}
+                  Excluir
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="text-muted-foreground hover:text-destructive transition-colors mt-0.5"
+                title="Excluir post"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )
+          )}
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground mt-0.5">
+            <X className="size-4" />
+          </button>
+        </div>
+      </div>
+
+      <CardContent className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">{day.day_label}</p>
+          <h3 className="font-semibold text-sm leading-snug">{post.theme}</h3>
+          {post.content_pillar && (
+            <Badge variant="outline" className="text-[10px] h-4 mt-1.5">{post.content_pillar}</Badge>
+          )}
+          {post.seasonal_hook && (
+            <Badge className="text-[10px] h-4 mt-1 ml-1 bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300">
+              🗓 {post.seasonal_hook}
+            </Badge>
+          )}
+        </div>
+
+        {/* Caption */}
+        {post.caption && (
+          <div className="bg-muted/40 rounded-lg p-3">
+            <p className="text-[10px] font-medium uppercase text-muted-foreground mb-1.5 flex items-center gap-1">
+              <Type className="size-3" /> Legenda
+            </p>
+            <p className="text-xs leading-relaxed whitespace-pre-wrap">{post.caption}</p>
+          </div>
+        )}
+
+        {/* Visual briefing (post / carousel / story) */}
+        {post.visual && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+              <Palette className="size-3" /> Briefing Visual
+            </p>
+
+            {/* Color palette */}
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1.5">Paleta de cores</p>
+              <div className="flex gap-2 flex-wrap">
+                {post.visual.color_palette.map((hex, i) => (
+                  <div key={i} className="flex flex-col items-center gap-1">
+                    <div
+                      className="size-8 rounded-lg border border-black/10 shadow-sm"
+                      style={{ backgroundColor: hex }}
+                    />
+                    <span className="text-[9px] font-mono text-muted-foreground">{hex}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Headline / subline */}
+            <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+              <p className="text-[10px] text-muted-foreground">Headline</p>
+              <p className="text-sm font-bold">{post.visual.headline}</p>
+              {post.visual.subline && (
+                <>
+                  <p className="text-[10px] text-muted-foreground mt-1">Subline</p>
+                  <p className="text-xs text-muted-foreground">{post.visual.subline}</p>
+                </>
+              )}
+            </div>
+
+            {/* Fonts */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-muted/30 rounded-lg p-2.5">
+                <p className="text-[9px] text-muted-foreground mb-0.5">Fonte headline</p>
+                <p className="text-xs font-medium">{post.visual.fonts.headline}</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-2.5">
+                <p className="text-[9px] text-muted-foreground mb-0.5">Fonte body</p>
+                <p className="text-xs font-medium">{post.visual.fonts.body}</p>
+              </div>
+            </div>
+
+            {/* Image description */}
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
+                <Camera className="size-3" /> Descrição da imagem
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-2.5">
+                {post.visual.image_description}
+              </p>
+            </div>
+
+            {/* Background */}
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">Fundo</p>
+              <p className="text-xs bg-muted/30 rounded-lg p-2.5 font-mono">{post.visual.background}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Reel script */}
+        {post.script && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+              <Clapperboard className="size-3" /> Roteiro do Reel · {post.script.duration}
+            </p>
+
+            {/* Hook */}
+            <div className="bg-pink-50 dark:bg-pink-950/30 rounded-lg p-3 border border-pink-100 dark:border-pink-900">
+              <p className="text-[10px] font-medium text-pink-600 dark:text-pink-400 mb-1">Hook (0-3s)</p>
+              <p className="text-xs font-semibold italic">&ldquo;{post.script.hook}&rdquo;</p>
+            </div>
+
+            {/* Scenes */}
+            <div className="space-y-2">
+              {post.script.scenes.map((scene, i) => (
+                <div key={i} className="flex gap-2.5">
+                  <div className="shrink-0 text-center">
+                    <div className="size-6 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-muted-foreground">{i + 1}</span>
+                    </div>
+                    <p className="text-[8px] text-muted-foreground mt-0.5 w-6 text-center leading-tight">{scene.time}</p>
+                  </div>
+                  <div className="flex-1 bg-muted/30 rounded-lg p-2.5 space-y-1.5">
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">Visual</p>
+                      <p className="text-xs">{scene.visual}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground">Narração</p>
+                      <p className="text-xs text-muted-foreground">{scene.narration}</p>
+                    </div>
+                    {scene.text_overlay && (
+                      <div className="bg-black/80 text-white rounded px-2 py-1 inline-block">
+                        <p className="text-[9px] font-bold">{scene.text_overlay}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="bg-muted/40 rounded-lg p-3">
+              <p className="text-[10px] text-muted-foreground mb-1">CTA final</p>
+              <p className="text-xs font-medium">{post.script.cta}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Carousel / Story Sequence: frames individuais ── */}
+        {isMultiFrame && carouselSlideCount > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1 shrink-0">
+                {isStorySequence
+                  ? <><GalleryHorizontal className="size-3" /> Frames ({carouselSlideCount})</>
+                  : <><Images className="size-3" /> Slides ({carouselSlideCount})</>
+                }
+              </p>
+              <div className="flex items-center gap-1.5">
+                {carouselSlideImages.some(Boolean) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={handleDownloadAllSlides}
+                    title={carouselSlideImages.filter(Boolean).length === 1 ? 'Baixar imagem' : 'Baixar todas como ZIP'}
+                  >
+                    <FolderArchive className="size-3" />
+                    {carouselSlideImages.filter(Boolean).length === 1 ? 'Baixar' : 'Baixar ZIP'}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5 text-xs"
+                  disabled={generatingAll || carouselSlideGenerating.some(Boolean)}
+                  onClick={handleGenerateAllSlides}
+                >
+                  {generatingAll ? (
+                    <><Loader2 className="size-3 animate-spin" />{carouselSlideImages.filter(Boolean).length}/{carouselSlideCount}...</>
+                  ) : (
+                    <><Sparkles className="size-3" />Gerar todas</>
+                  )}
+                </Button>
+              </div>
+            </div>
+            {post.visual?.slides?.map((slide, idx) => {
+              const img = carouselSlideImages[idx]
+              const generating = carouselSlideGenerating[idx]
+              return (
+                <div key={idx} className="border rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b">
+                    <span className="text-xs font-medium">{isStorySequence ? 'Frame' : 'Slide'} {slide.slide_number}</span>
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">{slide.headline}</span>
+                  </div>
+                  {generating && (
+                    <div className={`${isStorySequence ? 'aspect-[9/16]' : 'aspect-[4/5]'} bg-muted/50 relative overflow-hidden`}>
+                      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                      </div>
+                    </div>
+                  )}
+                  {!generating && img && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`data:image/png;base64,${img}`}
+                      alt={`${isStorySequence ? 'Frame' : 'Slide'} ${slide.slide_number}`}
+                      className="w-full object-cover"
+                    />
+                  )}
+                  {!generating && !img && (
+                    <div className={`${isStorySequence ? 'aspect-[9/16]' : 'aspect-[4/5]'} bg-muted/20 flex items-center justify-center`}>
+                      <p className="text-[10px] text-muted-foreground text-center px-4 leading-relaxed">{slide.image_description}</p>
+                    </div>
+                  )}
+                  <div className="p-2 flex gap-1.5">
+                    {img && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-7 text-xs shrink-0"
+                        onClick={() => downloadSlide(img, idx)}
+                        title="Baixar slide"
+                      >
+                        <Download className="size-3" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant={img ? 'outline' : 'default'}
+                      className="flex-1 gap-1.5 h-7 text-xs"
+                      disabled={generating || generatingAll}
+                      onClick={() => handleGenerateCarouselSlide(idx)}
+                    >
+                      {generating ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                      {generating ? 'Gerando...' : img ? 'Gerar novamente' : `Gerar ${isStorySequence ? 'frame' : 'imagem'}`}
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── Generated media preview (post / story) ── */}
+        {!isMultiFrame && mediaGenerating && isImageType && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+              <Loader2 className="size-3 animate-spin" /> Gerando imagem
+            </p>
+            <div className={`w-full ${aspectRatioClass} rounded-xl border bg-muted/50 overflow-hidden relative`}>
+              <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
+                  style={{ width: `${imageProgress}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground flex items-center justify-between">
+                <span>{imageProgressLabel}</span>
+                <span className="tabular-nums">{Math.round(imageProgress)}%</span>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!isMultiFrame && !mediaGenerating && displayImageSrc && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+              <Sparkles className="size-3" /> Imagem gerada
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={displayImageSrc}
+              alt="Imagem gerada"
+              className="w-full rounded-xl border shadow-sm object-cover"
+            />
+          </div>
+        )}
+
+        {displayVideoSrc && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+              <Sparkles className="size-3" /> Vídeo gerado
+            </p>
+            <video
+              src={displayVideoSrc}
+              controls
+              className="w-full rounded-xl border shadow-sm"
+            />
+          </div>
+        )}
+
+        {videoProgress && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg p-3">
+            <Loader2 className="size-3 animate-spin shrink-0" />
+            <span>{videoProgress}</span>
+          </div>
+        )}
+
+        {mediaError && (
+          <div className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 border border-red-200 dark:border-red-900">
+            {mediaError}
+          </div>
+        )}
+
+        {/* ── Action buttons (post / story / reel — não multi-frame) ── */}
+        {!isMultiFrame && (
+          <div className="flex gap-2 pt-1">
+            {(displayImageSrc || displayVideoSrc) && (
+              <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={handleDownload}>
+                <Download className="size-3.5" />
+                Baixar
+              </Button>
+            )}
+            <Button
+              size="sm"
+              className="flex-1 gap-1.5"
+              disabled={mediaGenerating}
+              onClick={isImageType ? handleGenerateImage : handleGenerateVideo}
+            >
+              {mediaGenerating ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="size-3.5" />
+              )}
+              {mediaGenerating
+                ? isImageType ? 'Gerando imagem...' : 'Gerando vídeo...'
+                : isImageType
+                  ? displayImageSrc ? 'Gerar novamente' : 'Gerar imagem'
+                  : displayVideoSrc ? 'Gerar novamente' : 'Gerar vídeo'
+              }
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
