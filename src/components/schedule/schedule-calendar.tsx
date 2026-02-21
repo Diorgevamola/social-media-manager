@@ -472,7 +472,7 @@ function PostGallerySection({
         const res = await fetch('/api/media/generate-video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
+          body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: 8 }),
         })
         if (!res.ok || !res.body) throw new Error('Falha ao conectar')
         const reader = res.body.getReader()
@@ -1112,6 +1112,7 @@ function PostExpandedModal({
   sessionMedia: Record<string, SessionMediaEntry>
   onSessionMediaAdded: (key: string, src: string, mimeType: string) => void
   mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string } | null
+  persistedSlideUrls?: (string | null)[]
   onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
   scheduleId?: string | null
   isApproved: boolean
@@ -1211,7 +1212,7 @@ function PostExpandedModal({
         const res = await fetch('/api/media/generate-video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
+          body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: 30 }),
         })
         if (!res.ok || !res.body) throw new Error('Falha ao conectar')
         const reader = res.body.getReader()
@@ -1261,12 +1262,26 @@ function PostExpandedModal({
     }
   }
 
+  // Auto-gera vídeo de reel ao abrir modal se ainda não há vídeo
+  useEffect(() => {
+    const hasVideo = !!(sessionMedia[mediaKey]) || !!mediaEntry?.videoUrl
+    if (type === 'reel' && !hasVideo) {
+      generateMain()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Resolve fonte de imagem de um slide
   function getSlideImage(idx: number): string | null {
+    // 1. Gerado nesta sessão (prioridade máxima)
     const slideKey = `${mediaKey}::slide${idx}`
     const slideEntry = sessionMedia[slideKey]
     if (slideEntry) return `data:${slideEntry.mimeType};base64,${slideEntry.src}`
-    // Slide 0 fallback: chave principal
+
+    // 2. URL persistida no banco (slide individual)
+    const persistedUrl = persistedSlideUrls?.[idx]
+    if (persistedUrl) return persistedUrl
+
+    // 3. Fallbacks para slide 0
     if (idx === 0) {
       const main = sessionMedia[mediaKey]
       if (main && main.mimeType !== 'video/mp4') return `data:${main.mimeType};base64,${main.src}`
@@ -1668,11 +1683,12 @@ function buildImagePrompt(post: SchedulePost): string {
   if (!v) return `${post.theme}. ${post.caption ?? ''}`
   return [
     `${v.image_description}.`,
-    `Headline: "${v.headline}".`,
-    v.subline ? `Subline: "${v.subline}".` : '',
-    `Color palette: ${v.color_palette.join(', ')}.`,
+    `Headline text on the image: "${v.headline}".`,
+    v.subline ? `Subline text on the image: "${v.subline}".` : '',
+    `Apply these brand colors as fills, backgrounds and accents throughout the design: ${v.color_palette.join(', ')}. NEVER write these hex codes as visible text on the image.`,
     `Background: ${v.background}.`,
     `Style: professional social media ${post.type} for Instagram.`,
+    `IMPORTANT: Do not display hex color codes, color swatches, or any technical metadata as text anywhere on the image.`,
   ].filter(Boolean).join(' ')
 }
 
@@ -1682,12 +1698,13 @@ function buildCarouselSlidePrompt(post: SchedulePost, slideIdx: number): string 
   if (!slide || !v) return buildImagePrompt(post)
   return [
     `${slide.image_description}.`,
-    `Slide ${slide.slide_number} de carrossel Instagram.`,
-    `Headline do slide: "${slide.headline}".`,
-    `Conteúdo do slide: "${slide.description}".`,
-    `Color palette: ${v.color_palette.join(', ')}.`,
+    `Instagram carousel slide ${slide.slide_number}.`,
+    `Headline text on the slide: "${slide.headline}".`,
+    `Body text on the slide: "${slide.description}".`,
+    `Apply these brand colors as fills, backgrounds and accents: ${v.color_palette.join(', ')}. NEVER write these hex codes as visible text on the image.`,
     `Background: ${v.background}.`,
     `Style: professional social media carousel slide for Instagram, 4:5 ratio.`,
+    `IMPORTANT: Do not display hex color codes, color swatches, or any technical metadata as text anywhere on the image.`,
   ].filter(Boolean).join(' ')
 }
 
@@ -1697,12 +1714,13 @@ function buildStorySequenceFramePrompt(post: SchedulePost, frameIdx: number): st
   if (!frame || !v) return buildImagePrompt(post)
   return [
     `${frame.image_description}.`,
-    `Frame ${frame.slide_number} de sequência de stories Instagram, formato vertical 9:16.`,
-    `Headline: "${frame.headline}".`,
-    `Conteúdo: "${frame.description}".`,
-    `Color palette: ${v.color_palette.join(', ')}.`,
+    `Instagram story frame ${frame.slide_number}, vertical 9:16 format.`,
+    `Headline text on the frame: "${frame.headline}".`,
+    `Body text on the frame: "${frame.description}".`,
+    `Apply these brand colors as fills, backgrounds and accents: ${v.color_palette.join(', ')}. NEVER write these hex codes as visible text on the image.`,
     `Background: ${v.background}.`,
     `Style: professional Instagram story, vertical 9:16 aspect ratio, full bleed design.`,
+    `IMPORTANT: Do not display hex color codes, color swatches, or any technical metadata as text anywhere on the image.`,
   ].filter(Boolean).join(' ')
 }
 
@@ -1733,6 +1751,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
   const mediaKey = `${day.date}::${post.theme}`
 
   const isImageType = type === 'post' || type === 'carousel' || type === 'story' || type === 'story_sequence'
+  const isReelType = type === 'reel'
   const isCarousel = type === 'carousel'
   const isStorySequence = type === 'story_sequence'
   const isMultiFrame = isCarousel || isStorySequence
@@ -1753,6 +1772,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
   const [imageProgress, setImageProgress] = useState(0)
+  const [reelDuration, setReelDuration] = useState<8 | 15 | 22 | 30>(30)
   const abortRef = useRef<AbortController | null>(null)
   const scheduleIdRef = useRef(scheduleId)
   scheduleIdRef.current = scheduleId
@@ -1839,6 +1859,14 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
     }, 300)
     return () => clearInterval(interval)
   }, [mediaGenerating, isImageType]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-gera vídeo de reel se ainda não há vídeo
+  useEffect(() => {
+    const hasVideo = !!generatedVideo || !!mediaEntry?.videoUrl
+    if (isReelType && !hasVideo) {
+      handleGenerateVideo()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const imageProgressLabel =
     imageProgress < 25 ? 'Interpretando prompt...' :
@@ -1985,7 +2013,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
       const res = await fetch('/api/media/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
+        body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: reelDuration }),
         signal: ctrl.signal,
       })
       if (!res.ok || !res.body) throw new Error('Falha ao conectar ao servidor')
@@ -2392,6 +2420,29 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
         {mediaError && (
           <div className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 border border-red-200 dark:border-red-900">
             {mediaError}
+          </div>
+        )}
+
+        {/* ── Seletor de duração (somente reels) ── */}
+        {!isMultiFrame && !isImageType && (
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-xs text-muted-foreground shrink-0">Duração:</span>
+            <div className="flex gap-1">
+              {([8, 15, 22, 30] as const).map(d => (
+                <button
+                  key={d}
+                  onClick={() => setReelDuration(d)}
+                  disabled={mediaGenerating}
+                  className={`text-xs px-2 py-1 rounded border transition-colors ${
+                    reelDuration === d
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-input hover:border-primary/60 text-muted-foreground'
+                  }`}
+                >
+                  {d}s
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

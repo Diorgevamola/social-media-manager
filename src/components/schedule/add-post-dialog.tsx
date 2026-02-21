@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Image, Film, Images, BookOpen, GalleryHorizontal, Sparkles, Loader2, RotateCcw,
 } from 'lucide-react'
@@ -100,6 +101,7 @@ export function AddPostDialog({
   onSaved,
 }: AddPostDialogProps) {
   const [selectedType, setSelectedType] = useState<PostType | null>(null)
+  const [description, setDescription] = useState('')
   const [generating, setGenerating] = useState(false)
   const [generatedPost, setGeneratedPost] = useState<SchedulePost | null>(null)
   const [generatedPostId, setGeneratedPostId] = useState<string | null>(null)
@@ -108,6 +110,7 @@ export function AddPostDialog({
   function handleClose() {
     if (generating) return
     setSelectedType(null)
+    setDescription('')
     setGenerating(false)
     setGeneratedPost(null)
     setGeneratedPostId(null)
@@ -117,6 +120,7 @@ export function AddPostDialog({
 
   function handleReset() {
     setSelectedType(null)
+    setDescription('')
     setGeneratedPost(null)
     setGeneratedPostId(null)
     setError(null)
@@ -133,7 +137,7 @@ export function AddPostDialog({
       const res = await fetch('/api/schedule/add-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scheduleId, date, postType: selectedType, accountId }),
+        body: JSON.stringify({ scheduleId, date, postType: selectedType, accountId, description: description.trim() || undefined }),
       })
       const data = await res.json() as { post?: SchedulePost; postId?: string; error?: string }
       if (!res.ok || data.error) throw new Error(data.error ?? 'Erro ao gerar post')
@@ -194,6 +198,26 @@ export function AddPostDialog({
                 ))}
               </div>
 
+              {/* Descrição opcional */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Descreva o que você quer no post{' '}
+                  <span className="font-normal">(opcional)</span>
+                </label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Ex: Quero mostrar os bastidores do atendimento ao cliente, tom descontraído, mencionar a promoção de fevereiro..."
+                  className="resize-none text-sm h-20"
+                  maxLength={500}
+                />
+                {description.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground text-right">
+                    {description.length}/500
+                  </p>
+                )}
+              </div>
+
               {error && (
                 <p className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">{error}</p>
               )}
@@ -204,7 +228,7 @@ export function AddPostDialog({
                 className="w-full ig-gradient text-white border-0 hover:opacity-90 gap-2"
               >
                 <Sparkles className="size-4" />
-                Gerar conteúdo
+                {description.trim() ? 'Gerar com sua descrição' : 'Gerar conteúdo'}
               </Button>
             </>
           )}

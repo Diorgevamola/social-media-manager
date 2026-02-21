@@ -68,7 +68,7 @@ const PROVIDER_PRICING = [
     provider: 'Google AI',
     models: [
       { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', type: 'text' as const, inputPer1M: 0.075, outputPer1M: 0.30, perUnit: null, unitLabel: null },
-      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', type: 'text' as const, inputPer1M: 0.10, outputPer1M: 0.40, perUnit: null, unitLabel: null },
+      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', type: 'text' as const, inputPer1M: 0.15, outputPer1M: 0.60, perUnit: null, unitLabel: null },
       { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', type: 'image' as const, inputPer1M: null, outputPer1M: null, perUnit: 0.04, unitLabel: 'por imagem' },
       { id: 'veo-3.1-generate-preview', label: 'Veo 3.1 (vídeo)', type: 'video' as const, inputPer1M: null, outputPer1M: null, perUnit: 0.35, unitLabel: 'por vídeo' },
     ],

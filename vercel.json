@@ -1,10 +1,19 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/publish-pending",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "functions": {
     "src/app/api/cron/publish-pending/route.ts": {
       "maxDuration": 60
     },
     "src/app/api/media/generate-video/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 800
+    },
+    "src/app/api/media/generate-video-seedance/route.ts": {
+      "maxDuration": 300
     },
     "src/app/api/schedule/generate/route.ts": {
       "maxDuration": 60

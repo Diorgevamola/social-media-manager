@@ -13,6 +13,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@fal-ai/client": "^1.9.3",
     "@google/genai": "^1.42.0",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.9.0",

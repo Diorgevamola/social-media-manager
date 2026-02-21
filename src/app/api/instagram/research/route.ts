@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       logAiUsage({
         userId: user.id,
         operationType: 'research',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
       })
     }
 

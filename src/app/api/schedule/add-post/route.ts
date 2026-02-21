@@ -5,13 +5,14 @@ import { z } from 'zod'
 import type { SchedulePost } from '@/types/schedule'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
 const schema = z.object({
   scheduleId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   postType: z.enum(['post', 'reel', 'carousel', 'story', 'story_sequence']),
   accountId: z.string().uuid(),
+  description: z.string().max(500).optional(),
 })
 
 const POST_TYPE_LABELS: Record<string, string> = {
@@ -32,8 +33,9 @@ function buildPrompt(params: {
   target_audience: string | null
   color_palette: string[] | null
   negative_words: string[] | null
+  description?: string
 }) {
-  const { postType, date, username, niche, brand_voice, main_goal, target_audience, color_palette, negative_words } = params
+  const { postType, date, username, niche, brand_voice, main_goal, target_audience, color_palette, negative_words, description } = params
   const hasPalette = color_palette && color_palette.length > 0
   const typeLabel = POST_TYPE_LABELS[postType] ?? postType
 
@@ -106,7 +108,7 @@ Meta principal: ${main_goal}
 ${target_audience ? `Público-alvo: ${target_audience}` : ''}
 Paleta de cores da marca: ${hasPalette ? color_palette.join(', ') + ' — USE ESTAS CORES no campo color_palette do briefing visual' : 'não definida (use cores adequadas ao nicho)'}
 ${negative_words && negative_words.length > 0 ? `PALAVRAS PROIBIDAS (NUNCA use estas palavras): ${negative_words.join(', ')}` : ''}
-
+${description ? `\nDireção criativa do usuário (SIGA ESTA DIREÇÃO para criar o conteúdo):\n"${description}"\n` : ''}
 Retorne APENAS um JSON válido com esta estrutura (sem markdown, sem \`\`\`):
 {
   "type": "${postType}",
@@ -131,7 +133,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Dados inválidos', details: parsed.error.flatten() }, { status: 400 })
     }
 
-    const { scheduleId, date, postType, accountId } = parsed.data
+    const { scheduleId, date, postType, accountId, description } = parsed.data
 
     // Verify scheduleId belongs to the user
     const { data: schedule, error: scheduleError } = await supabase
@@ -171,6 +173,7 @@ export async function POST(request: Request) {
       target_audience: account.target_audience as string | null,
       color_palette: (account.color_palette as string[] | null) ?? null,
       negative_words: (account.negative_words as string[] | null) ?? null,
+      description,
     })
 
     const result = await model.generateContent(prompt)

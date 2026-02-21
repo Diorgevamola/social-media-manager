@@ -8,7 +8,6 @@ import {
   CalendarDays,
   BarChart2,
   Settings,
-  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LogoMark } from '@/components/ui/logo'

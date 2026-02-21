@@ -8,7 +8,7 @@ import { ptBR } from 'date-fns/locale'
 import type { ScheduleDay } from '@/types/schedule'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
 const DAY_NAMES = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
 
@@ -416,7 +416,7 @@ Retorne APENAS um JSON válido com esta estrutura exata (contém exemplos dos 5 
           logAiUsage({
             userId: user.id,
             operationType: 'schedule',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-flash',
             inputTokens:  usageMeta?.promptTokenCount     ?? 0,
             outputTokens: usageMeta?.candidatesTokenCount ?? 0,
           })
