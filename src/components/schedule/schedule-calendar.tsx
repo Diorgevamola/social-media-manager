@@ -361,6 +361,8 @@ function PostGallerySection({
   const [publishing, setPublishing] = useState<Set<string>>(new Set())
   const [publishedKeys, setPublishedKeys] = useState<Set<string>>(new Set())
   const [publishErrors, setPublishErrors] = useState<Record<string, string>>({})
+  const [calendarReelDuration, setCalendarReelDuration] = useState<8 | 15 | 22 | 30>(8)
+  const [showDurationPicker, setShowDurationPicker] = useState<string | null>(null)
 
   const allPosts = schedule.schedule.flatMap(day => day.posts.map(post => ({ day, post })))
 
@@ -472,7 +474,7 @@ function PostGallerySection({
         const res = await fetch('/api/media/generate-video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: 8 }),
+          body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: calendarReelDuration }),
         })
         if (!res.ok || !res.body) throw new Error('Falha ao conectar')
         const reader = res.body.getReader()
@@ -858,6 +860,10 @@ function PostGallerySection({
           sessionMedia={sessionMedia}
           onSessionMediaAdded={onSessionMediaAdded}
           mediaEntry={mediaMap[`${expandedPost.day.date}::${expandedPost.post.theme}`] ?? null}
+          persistedSlideUrls={Array.from(
+            { length: expandedPost.post.visual?.slides?.length ?? 0 },
+            (_, i) => mediaMap[`${expandedPost.day.date}::${expandedPost.post.theme}::slide${i}`]?.imageUrl ?? null
+          )}
           onMediaSaved={onMediaSaved}
           scheduleId={scheduleId}
           isApproved={approved.has(`${expandedPost.day.date}::${expandedPost.post.theme}`)}
@@ -1046,14 +1052,46 @@ function PostGallerySection({
                 )}
 
                 {/* Regenerate */}
-                <button
-                  onClick={() => generateForPost(day, post)}
-                  disabled={isGenerating || bulkGenerating}
-                  className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Regenerar mídia"
-                >
-                  <RefreshCw className={`size-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
-                </button>
+                {post.type === 'reel' && showDurationPicker === key ? (
+                  <div className="flex items-center gap-1">
+                    {([8, 15, 22, 30] as const).map(d => (
+                      <button
+                        key={d}
+                        onClick={() => {
+                          setCalendarReelDuration(d)
+                          setShowDurationPicker(null)
+                          generateForPost(day, post)
+                        }}
+                        className={`text-[10px] px-1.5 py-1 rounded border transition-colors ${
+                          calendarReelDuration === d
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'border-input hover:border-primary/60 text-muted-foreground bg-background'
+                        }`}
+                      >
+                        {d}s
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setShowDurationPicker(null)}
+                      className="p-1 rounded text-muted-foreground hover:text-foreground text-[10px]"
+                    >✕</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (post.type === 'reel') {
+                        setShowDurationPicker(key)
+                      } else {
+                        generateForPost(day, post)
+                      }
+                    }}
+                    disabled={isGenerating || bulkGenerating}
+                    className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={post.type === 'reel' ? 'Selecionar duração e regenerar' : 'Regenerar mídia'}
+                  >
+                    <RefreshCw className={`size-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+                  </button>
+                )}
 
                 {/* Publish now */}
                 {accountConnected && hasMedia && !isPublished && mapEntry?.postId && (
@@ -1099,6 +1137,7 @@ function PostExpandedModal({
   sessionMedia,
   onSessionMediaAdded,
   mediaEntry,
+  persistedSlideUrls,
   onMediaSaved,
   scheduleId,
   isApproved,
@@ -1132,6 +1171,7 @@ function PostExpandedModal({
   const [generatingSlide, setGeneratingSlide] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
+  const [modalReelDuration, setModalReelDuration] = useState<8 | 15 | 22 | 30>(30)
 
   const scheduleIdRef = useRef(scheduleId)
   scheduleIdRef.current = scheduleId
@@ -1212,7 +1252,7 @@ function PostExpandedModal({
         const res = await fetch('/api/media/generate-video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: 30 }),
+          body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: modalReelDuration }),
         })
         if (!res.ok || !res.body) throw new Error('Falha ao conectar')
         const reader = res.body.getReader()
@@ -1538,6 +1578,28 @@ function PostExpandedModal({
                     <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg p-3">
                       <Loader2 className="size-3 animate-spin shrink-0" />
                       <span>{videoProgress}</span>
+                    </div>
+                  )}
+
+                  {type === 'reel' && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground shrink-0">Duração:</span>
+                      <div className="flex gap-1">
+                        {([8, 15, 22, 30] as const).map(d => (
+                          <button
+                            key={d}
+                            onClick={() => setModalReelDuration(d)}
+                            disabled={generating}
+                            className={`text-xs px-2 py-1 rounded border transition-colors ${
+                              modalReelDuration === d
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'border-input hover:border-primary/60 text-muted-foreground'
+                            }`}
+                          >
+                            {d}s
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 

@@ -3,8 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   exchangeCodeForToken,
   getLongLivedToken,
-  getUserPages,
-  getInstagramBusinessAccount,
+  getInstagramUserProfile,
 } from '@/lib/instagram/client'
 
 export async function GET(request: Request) {
@@ -43,56 +42,26 @@ export async function GET(request: Request) {
   const redirectUri = `${appUrl}/api/instagram/callback`
 
   try {
-    // 1. Token de curta duração
+    // 1. Token de curta duração via Instagram API direta (sem Facebook Pages)
     const { access_token: shortToken } = await exchangeCodeForToken(code, redirectUri)
 
-    // 2. Token de longa duração (~60 dias)
+    // 2. Token de longa duração (~60 dias) via graph.instagram.com
     const { access_token: longToken, expires_in } = await getLongLivedToken(shortToken)
 
     const tokenExpiresAt = new Date(Date.now() + expires_in * 1000).toISOString()
 
-    // 3. Páginas do Facebook vinculadas ao usuário
-    const pages = await getUserPages(longToken)
+    // 3. Busca user_id e username diretamente do Instagram (sem precisar de Página do Facebook)
+    const { user_id: igUserId } = await getInstagramUserProfile(longToken)
 
-    if (!pages.data || pages.data.length === 0) {
-      return NextResponse.redirect(
-        `${appUrl}/dashboard/accounts?error=${encodeURIComponent('Nenhuma Página do Facebook encontrada. Vincule uma Página ao seu perfil.')}`,
-      )
-    }
-
-    // 4. Encontrar a conta Business do Instagram vinculada a uma das páginas
-    let igUserId: string | null = null
-    let facebookPageId: string | null = null
-    let pageAccessToken: string | null = null
-
-    for (const page of pages.data) {
-      const igData = await getInstagramBusinessAccount(page.access_token, page.id)
-      if (igData.instagram_business_account?.id) {
-        igUserId = igData.instagram_business_account.id
-        facebookPageId = page.id
-        pageAccessToken = page.access_token
-        break
-      }
-    }
-
-    // Usa o token da página se disponível (maior escopo de publicação), caso contrário o user token
-    const finalToken = pageAccessToken ?? longToken
-
-    if (!igUserId) {
-      return NextResponse.redirect(
-        `${appUrl}/dashboard/accounts?error=${encodeURIComponent('Nenhuma conta Instagram Business encontrada nas suas Páginas do Facebook')}`,
-      )
-    }
-
-    // 5. Salva no banco — verifica que a conta pertence ao userId do state
+    // 4. Salva no banco
     const supabase = await createClient()
     const { error: updateError } = await supabase
       .from('instagram_accounts')
       .update({
-        access_token: finalToken,
+        access_token: longToken,
         token_expires_at: tokenExpiresAt,
         ig_user_id: igUserId,
-        facebook_page_id: facebookPageId,
+        facebook_page_id: null, // não utilizado no novo fluxo
         updated_at: new Date().toISOString(),
       })
       .eq('id', accountId)
@@ -105,7 +74,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(
-      `${appUrl}/dashboard/accounts?success=${encodeURIComponent('Conta conectada ao Meta com sucesso!')}`,
+      `${appUrl}/dashboard/accounts?success=${encodeURIComponent('Conta conectada ao Instagram com sucesso!')}`,
     )
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido'

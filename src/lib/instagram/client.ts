@@ -45,44 +45,49 @@ export class InstagramClient {
   }
 }
 
+// ── Instagram Platform API with Instagram Login (julho 2024) ──────────────────
+// Fluxo direto Instagram — sem Facebook Login, sem Páginas do Facebook.
+// Qualquer conta Business/Creator pode conectar após Advanced Access aprovado.
+
 export function getInstagramOAuthUrl(redirectUri: string, state?: string): string {
   const params = new URLSearchParams({
     client_id: process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID!,
     redirect_uri: redirectUri,
     scope: [
-      'instagram_basic',
-      'instagram_content_publish',
-      'instagram_manage_insights',
-      'pages_show_list',
-      'pages_read_engagement',
-      'business_management',
+      'instagram_business_basic',
+      'instagram_business_content_publish',
+      'instagram_business_manage_messages',
+      'instagram_business_manage_comments',
     ].join(','),
     response_type: 'code',
   })
 
   if (state) params.set('state', state)
 
-  return `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}`
+  // Endpoint do Instagram Login — não do Facebook
+  return `https://api.instagram.com/oauth/authorize?${params.toString()}`
 }
 
 export async function exchangeCodeForToken(code: string, redirectUri: string): Promise<{
   access_token: string
-  token_type: string
+  user_id: number
 }> {
-  const params = new URLSearchParams({
+  const body = new URLSearchParams({
     client_id: process.env.INSTAGRAM_APP_ID!,
     client_secret: process.env.INSTAGRAM_APP_SECRET!,
+    grant_type: 'authorization_code',
     redirect_uri: redirectUri,
     code,
   })
 
-  const res = await fetch(
-    `https://graph.facebook.com/v21.0/oauth/access_token?${params.toString()}`,
-  )
+  const res = await fetch('https://api.instagram.com/oauth/access_token', {
+    method: 'POST',
+    body,
+  })
 
   if (!res.ok) {
     const error = await res.json()
-    throw new Error(error.error?.message || 'Token exchange failed')
+    throw new Error(error.error_message || error.error?.message || 'Token exchange failed')
   }
 
   return res.json()
@@ -94,14 +99,13 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<{
   expires_in: number
 }> {
   const params = new URLSearchParams({
-    grant_type: 'fb_exchange_token',
-    client_id: process.env.INSTAGRAM_APP_ID!,
+    grant_type: 'ig_exchange_token',
     client_secret: process.env.INSTAGRAM_APP_SECRET!,
-    fb_exchange_token: shortLivedToken,
+    access_token: shortLivedToken,
   })
 
   const res = await fetch(
-    `https://graph.facebook.com/v21.0/oauth/access_token?${params.toString()}`,
+    `https://graph.instagram.com/access_token?${params.toString()}`,
   )
 
   if (!res.ok) {
@@ -112,31 +116,18 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<{
   return res.json()
 }
 
-export async function getInstagramBusinessAccount(
-  pageAccessToken: string,
-  pageId: string,
-): Promise<{ instagram_business_account?: { id: string } }> {
-  const res = await fetch(
-    `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${pageAccessToken}`,
-  )
-
-  if (!res.ok) {
-    throw new Error('Failed to get Instagram business account')
-  }
-
-  return res.json()
-}
-
-export async function getUserPages(userAccessToken: string): Promise<{
-  data: Array<{ id: string; name: string; access_token: string }>
+export async function getInstagramUserProfile(longLivedToken: string): Promise<{
+  user_id: string
+  username: string
 }> {
   const res = await fetch(
-    `https://graph.facebook.com/v21.0/me/accounts?access_token=${userAccessToken}`,
+    `https://graph.instagram.com/v21.0/me?fields=user_id,username&access_token=${longLivedToken}`,
   )
 
   if (!res.ok) {
-    throw new Error('Failed to get user pages')
+    throw new Error('Failed to get Instagram user profile')
   }
 
-  return res.json()
+  const data = await res.json() as { user_id: string; username: string }
+  return data
 }
