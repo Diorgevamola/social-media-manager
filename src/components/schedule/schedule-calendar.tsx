@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   Image, Film, Images, BookOpen, GalleryHorizontal, ChevronLeft, ChevronRight,
   Clock, Palette, Type, Camera, Clapperboard, Sparkles, X, Loader2, PlusCircle,
-  Download, Plus, Trash2, FolderArchive, CheckCircle2, Send, Calendar, Pencil,
+  Download, Plus, Trash2, FolderArchive, CheckCircle2, Send, Calendar, Pencil, RefreshCw,
 } from 'lucide-react'
 import type { GeneratedSchedule, SchedulePost, ScheduleDay } from '@/types/schedule'
 import type { MediaMap } from '@/app/dashboard/schedule/page'
@@ -99,6 +99,15 @@ export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regene
 
   function handleSessionMediaAdded(key: string, src: string, mimeType: string) {
     setSessionMedia(prev => ({ ...prev, [key]: { src, mimeType } }))
+  }
+
+  function handleSessionMediaCleared(key: string) {
+    setSessionMedia(prev => {
+      const n = { ...prev }
+      // Clear the main key and any sub-keys (slides, scenes)
+      Object.keys(n).forEach(k => { if (k === key || k.startsWith(`${key}::`)) delete n[k] })
+      return n
+    })
   }
 
   // Build a map: "yyyy-MM-dd" → ScheduleDay
@@ -365,6 +374,7 @@ export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regene
         onSelectPost={(post, day) => setSelected({ post, day })}
         sessionMedia={sessionMedia}
         onSessionMediaAdded={handleSessionMediaAdded}
+        onSessionMediaCleared={handleSessionMediaCleared}
       />
     </div>
   )
@@ -391,6 +401,7 @@ interface PostGallerySectionProps {
   onSelectPost?: (post: SchedulePost, day: ScheduleDay) => void
   sessionMedia: Record<string, SessionMediaEntry>
   onSessionMediaAdded: (key: string, src: string, mimeType: string) => void
+  onSessionMediaCleared: (key: string) => void
 }
 
 function PostGallerySection({
@@ -405,6 +416,7 @@ function PostGallerySection({
   onSelectPost: _onSelectPost,
   sessionMedia,
   onSessionMediaAdded,
+  onSessionMediaCleared,
 }: PostGallerySectionProps) {
   // Ref sempre atualizado com o scheduleId mais recente, evitando closure stale em uploadForPost
   // (ex: save do cronograma chega após a geração de imagem ter começado)
@@ -437,7 +449,8 @@ function PostGallerySection({
   const [publishErrors, setPublishErrors] = useState<Record<string, string>>({})
   const [calendarReelDuration, setCalendarReelDuration] = useState<4 | 6 | 8>(8)
   const [showDurationPicker, setShowDurationPicker] = useState<string | null>(null)
-  const [regeneratingCaption, setRegeneratingCaption] = useState<Set<string>>(new Set())
+  const [regeneratingPost, setRegeneratingPost] = useState<Set<string>>(new Set())
+  const [confirmRegeneratePost, setConfirmRegeneratePost] = useState<{ key: string; postId: string; day: ScheduleDay; post: SchedulePost } | null>(null)
   const [localCaptions, setLocalCaptions] = useState<Record<string, string>>({})
 
   const allPosts = schedule.schedule.flatMap(day => day.posts.map(post => ({ day, post })))
@@ -876,18 +889,22 @@ function PostGallerySection({
     }
   }
 
-  async function handleRegenerateCaptionGallery(key: string, postId: string) {
-    setRegeneratingCaption(prev => new Set(prev).add(key))
+  async function handleRegeneratePost(key: string, postId: string) {
+    setRegeneratingPost(prev => new Set(prev).add(key))
     try {
-      const res = await fetch(`/api/schedule/posts/${postId}/regenerate-caption`, { method: 'POST' })
+      const res = await fetch(`/api/schedule/posts/${postId}/regenerate-post`, { method: 'POST' })
       const data = await res.json() as { caption?: string; error?: string }
       if (res.ok && data.caption) {
         setLocalCaptions(prev => ({ ...prev, [key]: data.caption! }))
+        // Clear media from DB state and session media
+        onMediaSaved?.(key, null, null)
+        onSessionMediaCleared(key)
       }
     } catch {
       // silently ignore
     } finally {
-      setRegeneratingCaption(prev => { const n = new Set(prev); n.delete(key); return n })
+      setRegeneratingPost(prev => { const n = new Set(prev); n.delete(key); return n })
+      setConfirmRegeneratePost(null)
     }
   }
 
@@ -902,6 +919,40 @@ function PostGallerySection({
 
   return (
     <div className="space-y-3">
+      {/* Regenerate post confirmation modal */}
+      {confirmRegeneratePost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background rounded-xl border shadow-xl p-5 max-w-sm w-full space-y-4">
+            <div>
+              <h4 className="font-semibold text-sm">Refazer post completo?</h4>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                O post <span className="font-medium text-foreground">&ldquo;{confirmRegeneratePost.post.theme}&rdquo;</span> terá a legenda regenerada pelo Gemini e <strong className="text-destructive">toda a mídia gerada (imagem/vídeo) será apagada</strong> permanentemente.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmRegeneratePost(null)}
+                disabled={regeneratingPost.has(confirmRegeneratePost.key)}
+                className="flex-1 py-2 rounded-lg border text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleRegeneratePost(confirmRegeneratePost.key, confirmRegeneratePost.postId)}
+                disabled={regeneratingPost.has(confirmRegeneratePost.key)}
+                className="flex-1 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {regeneratingPost.has(confirmRegeneratePost.key) ? (
+                  <><Loader2 className="size-3.5 animate-spin" />Refazendo...</>
+                ) : (
+                  <><RefreshCw className="size-3.5" />Refazer tudo</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete confirmation modal */}
       {confirmingDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -1379,25 +1430,25 @@ function PostGallerySection({
                         </button>
                       )}
 
-                      {/* Refazer legenda */}
+                      {/* Refazer post completo */}
                       <button
                         onClick={() => {
                           if (mapEntry?.postId) {
-                            handleRegenerateCaptionGallery(key, mapEntry.postId)
+                            setConfirmRegeneratePost({ key, postId: mapEntry.postId, day, post })
                           } else {
                             setExpandedPost({ day, post })
                           }
                         }}
-                        disabled={regeneratingCaption.has(key)}
-                        className="flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        title="Refazer legenda com IA"
+                        disabled={regeneratingPost.has(key)}
+                        className="flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-orange-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Refazer post completo (apaga mídia e regenera legenda)"
                       >
-                        {regeneratingCaption.has(key)
+                        {regeneratingPost.has(key)
                           ? <Loader2 className="size-3.5 animate-spin" />
-                          : <Sparkles className="size-3.5" />
+                          : <RefreshCw className="size-3.5" />
                         }
                         <span className="text-[9px] font-medium leading-none">
-                          {regeneratingCaption.has(key) ? 'Gerando...' : 'Refazer texto'}
+                          {regeneratingPost.has(key) ? 'Refazendo...' : 'Refazer post'}
                         </span>
                       </button>
 
