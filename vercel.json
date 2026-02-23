@@ -3,10 +3,17 @@
     {
       "path": "/api/cron/publish-pending",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-tokens",
+      "schedule": "0 10 * * 1"
     }
   ],
   "functions": {
     "src/app/api/cron/publish-pending/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/refresh-tokens/route.ts": {
       "maxDuration": 60
     },
     "src/app/api/media/generate-video/route.ts": {
