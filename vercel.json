@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/publish-pending",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ],
   "functions": {
