@@ -84,6 +84,30 @@ export async function getContainerStatus(
   return data.status_code as 'FINISHED' | 'IN_PROGRESS' | 'ERROR' | 'EXPIRED'
 }
 
+/**
+ * Aguarda container ficar FINISHED com polling.
+ * Usado para carrosséis e posts simples que precisam de processamento.
+ * maxWaitMs: máximo de espera (default 25s — seguro para serverless 60s)
+ */
+async function waitForContainer(
+  containerId: string,
+  token: string,
+  maxWaitMs = 25000,
+  pollIntervalMs = 3000,
+): Promise<void> {
+  const start = Date.now()
+  while (Date.now() - start < maxWaitMs) {
+    const status = await getContainerStatus(containerId, token)
+    if (status === 'FINISHED') return
+    if (status === 'ERROR' || status === 'EXPIRED') {
+      throw new Error(`Container com status inválido: ${status}`)
+    }
+    // IN_PROGRESS — aguarda e tenta de novo
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs))
+  }
+  throw new Error('Timeout aguardando container do Instagram ficar pronto (>25s)')
+}
+
 /** Tenta publicar um container de reel já criado. Retorna null se ainda não está pronto. */
 export async function tryPublishReelContainer(
   igUserId: string,
@@ -179,6 +203,8 @@ export async function publishPost(
     if (urls.length === 0 && post.generated_image_url) urls.push(post.generated_image_url)
     if (urls.length === 0) throw new Error('Carrossel sem imagens')
     const containerId = await createCarouselContainer(ig_user_id, access_token, urls, caption)
+    // Aguarda container processar antes de publicar
+    await waitForContainer(containerId, access_token)
     const igMediaId = await publishContainer(ig_user_id, access_token, containerId)
     return { status: 'published', igMediaId }
   }
@@ -187,6 +213,8 @@ export async function publishPost(
   if (!post.generated_image_url) throw new Error('Post sem URL de imagem')
   const isStory = type === 'story' || type === 'story_sequence'
   const containerId = await createImageContainer(ig_user_id, access_token, post.generated_image_url, caption, isStory)
+  // Aguarda container processar antes de publicar
+  await waitForContainer(containerId, access_token)
   const igMediaId = await publishContainer(ig_user_id, access_token, containerId)
   return { status: 'published', igMediaId }
 }
