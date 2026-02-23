@@ -1234,7 +1234,7 @@ function PostExpandedModal({
   const [generatingSlide, setGeneratingSlide] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
-  const [modalReelDuration, setModalReelDuration] = useState<4 | 6 | 8>(8)
+  const [modalReelDuration] = useState<4 | 6 | 8>(8)
   const [sceneVideoGenerating, setSceneVideoGenerating] = useState<boolean[]>(() => Array(sceneCount).fill(false))
   const [sceneVideoProgress, setSceneVideoProgress] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))
   const [generatingAllScenes, setGeneratingAllScenes] = useState(false)
@@ -2214,7 +2214,6 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
   const [reelDuration, setReelDuration] = useState<4 | 6 | 8>(8)
   // Scene state
   const sceneCount = isReelType ? (post.script?.scenes?.length ?? 0) : 0
-  const [activeDetailScene, setActiveDetailScene] = useState(0)
   const [sceneVideos, setSceneVideos] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))
   const [sceneVideoGenerating, setSceneVideoGenerating] = useState<boolean[]>(() => Array(sceneCount).fill(false))
   const [sceneVideoProgress, setSceneVideoProgress] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))

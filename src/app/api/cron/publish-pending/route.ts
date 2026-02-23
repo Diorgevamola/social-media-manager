@@ -108,7 +108,7 @@ export async function GET(request: Request) {
 
     const decryptedAccount = {
       ...account,
-      access_token: decryptToken(account.access_token),
+      access_token: account.access_token ? decryptToken(account.access_token) : '',
     }
 
     await supabase
