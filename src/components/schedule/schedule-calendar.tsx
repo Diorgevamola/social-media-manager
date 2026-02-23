@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   Image, Film, Images, BookOpen, GalleryHorizontal, ChevronLeft, ChevronRight,
   Clock, Palette, Type, Camera, Clapperboard, Sparkles, X, Loader2, PlusCircle,
-  Download, Plus, Trash2, FolderArchive, CheckCircle2, RefreshCw, Send, Calendar, Pencil,
+  Download, Plus, Trash2, FolderArchive, CheckCircle2, Send, Calendar, Pencil,
 } from 'lucide-react'
 import type { GeneratedSchedule, SchedulePost, ScheduleDay } from '@/types/schedule'
 import type { MediaMap } from '@/app/dashboard/schedule/page'
@@ -437,6 +437,8 @@ function PostGallerySection({
   const [publishErrors, setPublishErrors] = useState<Record<string, string>>({})
   const [calendarReelDuration, setCalendarReelDuration] = useState<4 | 6 | 8>(8)
   const [showDurationPicker, setShowDurationPicker] = useState<string | null>(null)
+  const [regeneratingCaption, setRegeneratingCaption] = useState<Set<string>>(new Set())
+  const [localCaptions, setLocalCaptions] = useState<Record<string, string>>({})
 
   const allPosts = schedule.schedule.flatMap(day => day.posts.map(post => ({ day, post })))
 
@@ -874,6 +876,21 @@ function PostGallerySection({
     }
   }
 
+  async function handleRegenerateCaptionGallery(key: string, postId: string) {
+    setRegeneratingCaption(prev => new Set(prev).add(key))
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}/regenerate-caption`, { method: 'POST' })
+      const data = await res.json() as { caption?: string; error?: string }
+      if (res.ok && data.caption) {
+        setLocalCaptions(prev => ({ ...prev, [key]: data.caption! }))
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setRegeneratingCaption(prev => { const n = new Set(prev); n.delete(key); return n })
+    }
+  }
+
   const pendingCount = allPosts.filter(({ day, post }) => {
     const key = `${day.date}::${post.theme}`
     return !sessionMedia[key] && !mediaMap[key]?.imageUrl && !mediaMap[key]?.videoUrl
@@ -1099,6 +1116,11 @@ function PostGallerySection({
           onMediaSaved={onMediaSaved}
           scheduleId={scheduleId}
           isApproved={approved.has(`${expandedPost.day.date}::${expandedPost.post.theme}`)}
+          initialCaption={localCaptions[`${expandedPost.day.date}::${expandedPost.post.theme}`] ?? undefined}
+          onCaptionUpdated={(newCaption) => {
+            const key = `${expandedPost.day.date}::${expandedPost.post.theme}`
+            setLocalCaptions(prev => ({ ...prev, [key]: newCaption }))
+          }}
           onApproveToggle={() => {
             const key = `${expandedPost.day.date}::${expandedPost.post.theme}`
             setApproved(prev => {
@@ -1277,10 +1299,10 @@ function PostGallerySection({
               </div>
 
               {/* Action buttons — hidden in selection mode */}
-              <div className={`px-2 pb-2 flex items-center gap-1 flex-wrap ${selectionMode ? 'invisible' : ''}`}>
+              <div className={`px-2 pb-2 flex flex-col gap-1 ${selectionMode ? 'invisible' : ''}`}>
                 {isPublished ? (
                   /* Post publicado: só download e delete */
-                  <>
+                  <div className="flex items-center gap-1">
                     {hasMedia && (
                       <button
                         onClick={() => {
@@ -1305,114 +1327,156 @@ function PostGallerySection({
                     >
                       {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                     </button>
-                  </>
+                  </div>
                 ) : (
                   /* Post não publicado: ações completas */
                   <>
-                    {/* Publicar agora — botão em destaque */}
-                    {accountConnected && mapEntry?.postId && (
-                      <button
-                        onClick={() => handlePublishNow(key, mapEntry.postId)}
-                        disabled={isPublishing}
-                        className={`flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 px-2 rounded-lg transition-colors flex-1 ${
-                          hasMedia
-                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                            : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
-                        } disabled:opacity-40 disabled:cursor-not-allowed`}
-                        title="Publicar agora no Instagram"
-                      >
-                        {isPublishing ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}
-                        {isPublishing ? 'Publicando...' : 'Publicar'}
-                      </button>
-                    )}
-
-                    {/* Download */}
-                    {hasMedia && (
-                      <button
-                        onClick={() => {
-                          const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
-                          const a = document.createElement('a')
-                          a.href = thumbSrc!
-                          a.download = thumbIsVideo ? `${slug}.mp4` : `${slug}.png`
-                          a.click()
-                        }}
-                        className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        title="Baixar mídia"
-                      >
-                        <Download className="size-3.5" />
-                      </button>
-                    )}
-
-                    {/* Regenerate */}
-                    {post.type === 'reel' && showDurationPicker === key ? (
-                      <div className="flex items-center gap-1">
-                        {([4, 6, 8] as const).map(d => (
+                    {/* Linha 1: 3 ações principais com label */}
+                    <div className="grid grid-cols-3 gap-1">
+                      {/* Refazer mídia */}
+                      {post.type === 'reel' && showDurationPicker === key ? (
+                        <div className="col-span-3 flex items-center gap-1">
+                          <span className="text-[9px] text-muted-foreground mr-0.5">Duração:</span>
+                          {([4, 6, 8] as const).map(d => (
+                            <button
+                              key={d}
+                              onClick={() => {
+                                setCalendarReelDuration(d)
+                                setShowDurationPicker(null)
+                                generateForPost(day, post)
+                              }}
+                              className={`text-[10px] px-1.5 py-1 rounded border transition-colors ${
+                                calendarReelDuration === d
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'border-input hover:border-primary/60 text-muted-foreground bg-background'
+                              }`}
+                            >
+                              {d}s
+                            </button>
+                          ))}
                           <button
-                            key={d}
-                            onClick={() => {
-                              setCalendarReelDuration(d)
-                              setShowDurationPicker(null)
-                              generateForPost(day, post)
-                            }}
-                            className={`text-[10px] px-1.5 py-1 rounded border transition-colors ${
-                              calendarReelDuration === d
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'border-input hover:border-primary/60 text-muted-foreground bg-background'
-                            }`}
-                          >
-                            {d}s
-                          </button>
-                        ))}
+                            onClick={() => setShowDurationPicker(null)}
+                            className="p-1 rounded text-muted-foreground hover:text-foreground text-[10px]"
+                          >✕</button>
+                        </div>
+                      ) : (
                         <button
-                          onClick={() => setShowDurationPicker(null)}
-                          className="p-1 rounded text-muted-foreground hover:text-foreground text-[10px]"
-                        >✕</button>
-                      </div>
-                    ) : (
+                          onClick={() => {
+                            if (post.type === 'reel') setShowDurationPicker(key)
+                            else generateForPost(day, post)
+                          }}
+                          disabled={isGenerating || bulkGenerating}
+                          className="flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Refazer mídia"
+                        >
+                          {isGenerating
+                            ? <Loader2 className="size-3.5 animate-spin" />
+                            : <Camera className="size-3.5" />
+                          }
+                          <span className="text-[9px] font-medium leading-none">
+                            {isGenerating ? 'Gerando...' : 'Refazer mídia'}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Refazer legenda */}
                       <button
                         onClick={() => {
-                          if (post.type === 'reel') {
-                            setShowDurationPicker(key)
+                          if (mapEntry?.postId) {
+                            handleRegenerateCaptionGallery(key, mapEntry.postId)
                           } else {
-                            generateForPost(day, post)
+                            setExpandedPost({ day, post })
                           }
                         }}
-                        disabled={isGenerating || bulkGenerating}
-                        className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        title={post.type === 'reel' ? 'Selecionar duração e regenerar' : 'Regenerar mídia'}
+                        disabled={regeneratingCaption.has(key)}
+                        className="flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Refazer legenda com IA"
                       >
-                        <RefreshCw className={`size-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
-                      </button>
-                    )}
-
-                    {/* Confirmar agendamento */}
-                    {mapEntry?.postId && (
-                      <button
-                        onClick={() => handleToggleConfirmGallery(key, mapEntry.postId, !isConfirmedCard)}
-                        disabled={isConfirmingCard}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          isConfirmedCard
-                            ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
-                            : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-emerald-600'
-                        }`}
-                        title={isConfirmedCard ? 'Cancelar confirmação de agendamento' : 'Confirmar agendamento'}
-                      >
-                        {isConfirmingCard
+                        {regeneratingCaption.has(key)
                           ? <Loader2 className="size-3.5 animate-spin" />
-                          : <CheckCircle2 className="size-3.5" />
+                          : <Sparkles className="size-3.5" />
                         }
+                        <span className="text-[9px] font-medium leading-none">
+                          {regeneratingCaption.has(key) ? 'Gerando...' : 'Refazer texto'}
+                        </span>
                       </button>
-                    )}
 
-                    {/* Delete */}
-                    <button
-                      onClick={() => setConfirmingDelete({ key, day, post })}
-                      disabled={!scheduleId || isDeleting}
-                      className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      title={scheduleId ? 'Apagar post' : 'Salve o cronograma para apagar posts'}
-                    >
-                      {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-                    </button>
+                      {/* Editar post */}
+                      <button
+                        onClick={() => setExpandedPost({ day, post })}
+                        className="flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        title="Editar post"
+                      >
+                        <Pencil className="size-3.5" />
+                        <span className="text-[9px] font-medium leading-none">Editar post</span>
+                      </button>
+                    </div>
+
+                    {/* Linha 2: ações secundárias */}
+                    <div className="flex items-center gap-1">
+                      {/* Publicar agora */}
+                      {accountConnected && mapEntry?.postId && (
+                        <button
+                          onClick={() => handlePublishNow(key, mapEntry.postId)}
+                          disabled={isPublishing}
+                          className={`flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 px-2 rounded-lg transition-colors flex-1 ${
+                            hasMedia
+                              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                              : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                          title="Publicar agora no Instagram"
+                        >
+                          {isPublishing ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}
+                          {isPublishing ? 'Publicando...' : 'Publicar'}
+                        </button>
+                      )}
+
+                      {/* Download */}
+                      {hasMedia && (
+                        <button
+                          onClick={() => {
+                            const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
+                            const a = document.createElement('a')
+                            a.href = thumbSrc!
+                            a.download = thumbIsVideo ? `${slug}.mp4` : `${slug}.png`
+                            a.click()
+                          }}
+                          className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          title="Baixar mídia"
+                        >
+                          <Download className="size-3.5" />
+                        </button>
+                      )}
+
+                      {/* Confirmar agendamento */}
+                      {mapEntry?.postId && (
+                        <button
+                          onClick={() => handleToggleConfirmGallery(key, mapEntry.postId, !isConfirmedCard)}
+                          disabled={isConfirmingCard}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isConfirmedCard
+                              ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                              : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-emerald-600'
+                          }`}
+                          title={isConfirmedCard ? 'Cancelar confirmação de agendamento' : 'Confirmar agendamento'}
+                        >
+                          {isConfirmingCard
+                            ? <Loader2 className="size-3.5 animate-spin" />
+                            : <CheckCircle2 className="size-3.5" />
+                          }
+                        </button>
+                      )}
+
+                      {/* Delete */}
+                      <button
+                        onClick={() => setConfirmingDelete({ key, day, post })}
+                        disabled={!scheduleId || isDeleting}
+                        className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={scheduleId ? 'Apagar post' : 'Salve o cronograma para apagar posts'}
+                      >
+                        {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
@@ -1445,6 +1509,8 @@ function PostExpandedModal({
   onRescheduled,
   onConfirmed,
   accountConnected,
+  initialCaption,
+  onCaptionUpdated,
   onClose,
 }: {
   post: SchedulePost
@@ -1463,6 +1529,8 @@ function PostExpandedModal({
   onRescheduled?: (oldDate: string, newDate: string, postId: string, theme: string, newTime: string | null) => void
   onConfirmed?: (postId: string, confirmed: boolean) => void
   accountConnected?: boolean
+  initialCaption?: string
+  onCaptionUpdated?: (newCaption: string) => void
   onClose: () => void
 }) {
   const type = safePostType(post.type)
@@ -1501,6 +1569,69 @@ function PostExpandedModal({
 
   const scheduleIdRef = useRef(scheduleId)
   scheduleIdRef.current = scheduleId
+
+  // Caption editing
+  const [localCaption, setLocalCaption] = useState<string>(initialCaption ?? post.caption ?? '')
+  const [editingCaption, setEditingCaption] = useState(false)
+  const [captionEdit, setCaptionEdit] = useState(localCaption)
+  const [captionSaving, setCaptionSaving] = useState(false)
+  const [captionError, setCaptionError] = useState<string | null>(null)
+  const [modalRegeneratingCaption, setModalRegeneratingCaption] = useState(false)
+
+  // Sync localCaption if initialCaption changes (e.g., regenerated from gallery)
+  const prevInitialCaption = useRef(initialCaption)
+  if (initialCaption !== undefined && initialCaption !== prevInitialCaption.current) {
+    prevInitialCaption.current = initialCaption
+    setLocalCaption(initialCaption)
+    if (!editingCaption) setCaptionEdit(initialCaption)
+  }
+
+  async function handleSaveCaption() {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    setCaptionSaving(true)
+    setCaptionError(null)
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caption: captionEdit }),
+      })
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error ?? 'Erro ao salvar')
+      }
+      setLocalCaption(captionEdit)
+      onCaptionUpdated?.(captionEdit)
+      setEditingCaption(false)
+    } catch (err) {
+      setCaptionError(err instanceof Error ? err.message : 'Erro ao salvar')
+    } finally {
+      setCaptionSaving(false)
+    }
+  }
+
+  async function handleModalRegenerateCaption() {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    setModalRegeneratingCaption(true)
+    setCaptionError(null)
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}/regenerate-caption`, { method: 'POST' })
+      const data = await res.json() as { caption?: string; error?: string }
+      if (res.ok && data.caption) {
+        setLocalCaption(data.caption)
+        setCaptionEdit(data.caption)
+        onCaptionUpdated?.(data.caption)
+      } else {
+        setCaptionError(data.error ?? 'Erro ao regenerar')
+      }
+    } catch {
+      setCaptionError('Erro de rede')
+    } finally {
+      setModalRegeneratingCaption(false)
+    }
+  }
 
   const [modalEditingSchedule, setModalEditingSchedule] = useState(false)
   const [modalRescheduleDate, setModalRescheduleDate] = useState(day.date)
@@ -2284,14 +2415,77 @@ function PostExpandedModal({
 
             {/* Right: Informações do post */}
             <div className="p-5 space-y-4 overflow-y-auto">
-              {post.caption && (
-                <div className="bg-muted/40 rounded-lg p-3">
-                  <p className="text-[10px] font-medium uppercase text-muted-foreground mb-1.5 flex items-center gap-1">
+              {/* Legenda — editável */}
+              <div className="bg-muted/40 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
                     <Type className="size-3" /> Legenda
                   </p>
-                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{post.caption}</p>
+                  <div className="flex items-center gap-1">
+                    {mediaEntry?.postId && !editingCaption && (
+                      <button
+                        onClick={handleModalRegenerateCaption}
+                        disabled={modalRegeneratingCaption}
+                        className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-primary transition-colors disabled:opacity-40"
+                        title="Regenerar com IA"
+                      >
+                        {modalRegeneratingCaption
+                          ? <Loader2 className="size-3 animate-spin" />
+                          : <Sparkles className="size-3" />
+                        }
+                        {modalRegeneratingCaption ? 'Gerando...' : 'IA'}
+                      </button>
+                    )}
+                    {mediaEntry?.postId && (
+                      <button
+                        onClick={() => { setCaptionEdit(localCaption); setEditingCaption(v => !v); setCaptionError(null) }}
+                        className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+                        title={editingCaption ? 'Cancelar edição' : 'Editar legenda'}
+                      >
+                        {editingCaption ? <X className="size-3" /> : <Pencil className="size-3" />}
+                        {editingCaption ? 'Cancelar' : 'Editar'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
+                {editingCaption ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={captionEdit}
+                      onChange={e => setCaptionEdit(e.target.value)}
+                      rows={6}
+                      className="w-full text-xs leading-relaxed border rounded-md px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                      placeholder="Escreva a legenda..."
+                    />
+                    {captionError && <p className="text-[10px] text-destructive">{captionError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveCaption}
+                        disabled={captionSaving}
+                        className="flex-1 flex items-center justify-center gap-1 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {captionSaving ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+                        Salvar
+                      </button>
+                      <button
+                        onClick={() => { setEditingCaption(false); setCaptionError(null) }}
+                        disabled={captionSaving}
+                        className="text-xs text-muted-foreground border rounded-md px-3 py-1.5 hover:bg-muted transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  localCaption ? (
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap">{localCaption}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">
+                      {mediaEntry?.postId ? 'Nenhuma legenda. Clique em Editar ou IA para gerar.' : 'Nenhuma legenda.'}
+                    </p>
+                  )
+                )}
+              </div>
 
               {post.visual && (
                 <div className="space-y-3">

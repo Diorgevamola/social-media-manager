@@ -77,12 +77,13 @@ export async function PATCH(
     const { userId, supabase } = auth
 
     const { id } = await params
-    const body = await request.json() as { date?: string; time?: string | null; confirmed?: boolean }
+    const body = await request.json() as { date?: string; time?: string | null; confirmed?: boolean; caption?: string | null }
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (body.date !== undefined) updates.date = body.date
     if ('time' in body) updates.time = body.time ?? null
     if (body.confirmed !== undefined) updates.confirmed = body.confirmed
+    if ('caption' in body) updates.caption = body.caption
 
     const { error } = await supabase
       .from('schedule_posts')
