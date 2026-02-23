@@ -64,8 +64,8 @@ export function getInstagramOAuthUrl(redirectUri: string, state?: string): strin
 
   if (state) params.set('state', state)
 
-  // Endpoint do Instagram Login — não do Facebook
-  return `https://api.instagram.com/oauth/authorize?${params.toString()}`
+  // Endpoint do Instagram Business Login (novo) — www.instagram.com, não api.instagram.com
+  return `https://www.instagram.com/oauth/authorize?${params.toString()}`
 }
 
 export async function exchangeCodeForToken(code: string, redirectUri: string): Promise<{
