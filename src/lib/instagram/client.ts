@@ -80,25 +80,18 @@ export async function exchangeCodeForToken(code: string, redirectUri: string): P
     code,
   })
 
-  // DEBUG — remover após diagnóstico
-  console.error('[IG-EXCHANGE] body params:', Object.fromEntries(body))
-
   const res = await fetch('https://api.instagram.com/oauth/access_token', {
     method: 'POST',
-    body,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
   })
 
   const rawText = await res.text()
-  // DEBUG — remover após diagnóstico
-  console.error('[IG-EXCHANGE] status:', res.status, 'response:', rawText)
 
   if (!res.ok) {
     let error: Record<string, unknown> = {}
     try { error = JSON.parse(rawText) } catch { /* ignore */ }
-    throw Object.assign(
-      new Error(String(error.error_message || error.error || rawText || 'Token exchange failed')),
-      { igRawResponse: rawText, igStatus: res.status },
-    )
+    throw new Error(String(error.error_message || error.error || rawText || 'Token exchange failed'))
   }
 
   return JSON.parse(rawText)

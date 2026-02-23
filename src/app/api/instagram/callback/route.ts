@@ -42,11 +42,6 @@ export async function GET(request: Request) {
 
   const redirectUri = `${appUrl}/api/instagram/callback`
 
-  // DEBUG — remover após diagnóstico
-  console.error('[IG-CALLBACK] appUrl:', appUrl)
-  console.error('[IG-CALLBACK] redirectUri:', redirectUri)
-  console.error('[IG-CALLBACK] code length:', code?.length)
-
   try {
     // 1. Token de curta duração via Instagram API direta (sem Facebook Pages)
     const { access_token: shortToken } = await exchangeCodeForToken(code, redirectUri)
@@ -84,15 +79,8 @@ export async function GET(request: Request) {
     )
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido'
-    // DEBUG: return full details as JSON temporarily
-    const igErr = err as Record<string, unknown>
-    return NextResponse.json({
-      error: message,
-      redirectUri,
-      appUrl,
-      igRawResponse: igErr.igRawResponse,
-      igStatus: igErr.igStatus,
-      codeLength: code?.length,
-    }, { status: 400 })
+    return NextResponse.redirect(
+      `${appUrl}/dashboard/accounts?error=${encodeURIComponent(message)}`,
+    )
   }
 }
