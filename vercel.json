@@ -10,7 +10,7 @@
       "maxDuration": 60
     },
     "src/app/api/media/generate-video/route.ts": {
-      "maxDuration": 800
+      "maxDuration": 300
     },
     "src/app/api/media/generate-video-seedance/route.ts": {
       "maxDuration": 300
