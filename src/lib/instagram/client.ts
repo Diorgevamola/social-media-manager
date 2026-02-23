@@ -88,14 +88,20 @@ export async function exchangeCodeForToken(code: string, redirectUri: string): P
     body,
   })
 
+  const rawText = await res.text()
+  // DEBUG — remover após diagnóstico
+  console.error('[IG-EXCHANGE] status:', res.status, 'response:', rawText)
+
   if (!res.ok) {
-    const error = await res.json()
-    // DEBUG
-    console.error('[IG-EXCHANGE] error response:', JSON.stringify(error))
-    throw new Error(error.error_message || error.error?.message || 'Token exchange failed')
+    let error: Record<string, unknown> = {}
+    try { error = JSON.parse(rawText) } catch { /* ignore */ }
+    throw Object.assign(
+      new Error(String(error.error_message || error.error || rawText || 'Token exchange failed')),
+      { igRawResponse: rawText, igStatus: res.status },
+    )
   }
 
-  return res.json()
+  return JSON.parse(rawText)
 }
 
 export async function getLongLivedToken(shortLivedToken: string): Promise<{

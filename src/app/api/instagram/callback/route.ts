@@ -84,8 +84,15 @@ export async function GET(request: Request) {
     )
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido'
-    return NextResponse.redirect(
-      `${appUrl}/dashboard/accounts?error=${encodeURIComponent(message)}`,
-    )
+    // DEBUG: return full details as JSON temporarily
+    const igErr = err as Record<string, unknown>
+    return NextResponse.json({
+      error: message,
+      redirectUri,
+      appUrl,
+      igRawResponse: igErr.igRawResponse,
+      igStatus: igErr.igStatus,
+      codeLength: code?.length,
+    }, { status: 400 })
   }
 }
