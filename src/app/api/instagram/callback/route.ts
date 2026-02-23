@@ -42,6 +42,11 @@ export async function GET(request: Request) {
 
   const redirectUri = `${appUrl}/api/instagram/callback`
 
+  // DEBUG — remover após diagnóstico
+  console.error('[IG-CALLBACK] appUrl:', appUrl)
+  console.error('[IG-CALLBACK] redirectUri:', redirectUri)
+  console.error('[IG-CALLBACK] code length:', code?.length)
+
   try {
     // 1. Token de curta duração via Instagram API direta (sem Facebook Pages)
     const { access_token: shortToken } = await exchangeCodeForToken(code, redirectUri)
