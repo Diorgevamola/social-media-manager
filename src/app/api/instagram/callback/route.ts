@@ -54,7 +54,20 @@ export async function GET(request: Request) {
     // 3. Busca user_id e username diretamente do Instagram (sem precisar de Página do Facebook)
     const { user_id: igUserId } = await getInstagramUserProfile(longToken)
 
-    // 4. Salva no banco
+    // 4. Busca foto de perfil via Graph API (best-effort — não bloqueia o fluxo)
+    let profilePictureUrl: string | null = null
+    try {
+      const picRes = await fetch(
+        `https://graph.instagram.com/v21.0/${igUserId}?fields=profile_picture_url&access_token=${longToken}`,
+        { cache: 'no-store' },
+      )
+      if (picRes.ok) {
+        const picData = (await picRes.json()) as { profile_picture_url?: string }
+        profilePictureUrl = picData.profile_picture_url ?? null
+      }
+    } catch { /* silently ignore */ }
+
+    // 5. Salva no banco
     const supabase = await createClient()
     const { error: updateError } = await supabase
       .from('instagram_accounts')
@@ -63,6 +76,7 @@ export async function GET(request: Request) {
         token_expires_at: tokenExpiresAt,
         ig_user_id: igUserId,
         facebook_page_id: null, // não utilizado no novo fluxo
+        ...(profilePictureUrl ? { profile_picture_url: profilePictureUrl } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', accountId)
