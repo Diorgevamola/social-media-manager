@@ -310,6 +310,64 @@ export function ScheduleConfigurator({
     })
   }
 
+  function handlePostRescheduled(oldDate: string, newDate: string, postId: string, theme: string, newTime: string | null) {
+    setResult(prev => {
+      if (!prev) return prev
+      // Find the post in oldDate
+      const sourceDay = prev.schedule.find(d => d.date === oldDate)
+      const movedPost = sourceDay?.posts.find(p => p.theme === theme)
+      if (!movedPost) return prev
+      // Build updated post with new time
+      const updatedPost: SchedulePost = { ...movedPost, time: newTime ?? movedPost.time }
+      return {
+        ...prev,
+        schedule: prev.schedule
+          .map(d => {
+            if (d.date === oldDate) {
+              return { ...d, posts: d.posts.filter(p => p.theme !== theme) }
+            }
+            if (d.date === newDate) {
+              return { ...d, posts: [...d.posts, updatedPost] }
+            }
+            return d
+          })
+          .filter(d => d.posts.length > 0),
+      }
+    })
+    // Move mediaMap entries to new key
+    const oldKey = `${oldDate}::${theme}`
+    const newKey = `${newDate}::${theme}`
+    setMediaMap(prev => {
+      const next = { ...prev }
+      if (next[oldKey]) {
+        next[newKey] = next[oldKey]
+        delete next[oldKey]
+      }
+      // Also move slide/scene keys
+      Object.keys(next).forEach(k => {
+        if (k.startsWith(`${oldKey}::`)) {
+          const suffix = k.slice(oldKey.length)
+          next[`${newKey}${suffix}`] = next[k]
+          delete next[k]
+        }
+      })
+      return next
+    })
+  }
+
+  function handlePostConfirmed(postId: string, confirmed: boolean) {
+    setMediaMap(prev => {
+      const next = { ...prev }
+      // Find the key for this postId and update confirmed
+      for (const key of Object.keys(next)) {
+        if (next[key].postId === postId) {
+          next[key] = { ...next[key], confirmed }
+        }
+      }
+      return next
+    })
+  }
+
   async function handleAccountSwitch(accountId: string) {
     if (accountId === selectedAccountId || loadingAccount) return
     setSelectedAccountId(accountId)
@@ -417,6 +475,8 @@ export function ScheduleConfigurator({
             }
             onPostAdded={handlePostAdded}
             onPostDeleted={handlePostDeleted}
+            onPostRescheduled={handlePostRescheduled}
+            onPostConfirmed={handlePostConfirmed}
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center">

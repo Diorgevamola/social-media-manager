@@ -98,6 +98,7 @@ export interface SchedulePostRow {
   generated_image_url: string | null
   generated_video_url: string | null
   slide_image_urls: Record<string, string> | null
+  confirmed: boolean
   status: 'planned' | 'published'
   published_at: string | null
   ig_media_id: string | null
@@ -323,6 +324,7 @@ export type Database = {
           script_data?: Record<string, unknown> | null
           generated_image_url?: string | null
           generated_video_url?: string | null
+          confirmed?: boolean
           status?: 'planned' | 'published'
           published_at?: string | null
           ig_media_id?: string | null
@@ -333,9 +335,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          date?: string
+          time?: string | null
           generated_image_url?: string | null
           generated_video_url?: string | null
           slide_image_urls?: Record<string, string> | null
+          confirmed?: boolean
           status?: 'planned' | 'published'
           published_at?: string | null
           ig_media_id?: string | null

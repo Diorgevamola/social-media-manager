@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   Image, Film, Images, BookOpen, GalleryHorizontal, ChevronLeft, ChevronRight,
   Clock, Palette, Type, Camera, Clapperboard, Sparkles, X, Loader2, PlusCircle,
-  Download, Plus, Trash2, FolderArchive, CheckCircle2, RefreshCw, Send,
+  Download, Plus, Trash2, FolderArchive, CheckCircle2, RefreshCw, Send, Calendar, Pencil,
 } from 'lucide-react'
 import type { GeneratedSchedule, SchedulePost, ScheduleDay } from '@/types/schedule'
 import type { MediaMap } from '@/app/dashboard/schedule/page'
@@ -75,9 +75,11 @@ interface ScheduleCalendarProps {
   onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
   onPostAdded?: (date: string, post: SchedulePost, postId: string) => void
   onPostDeleted?: (date: string, postId: string, theme: string) => void
+  onPostRescheduled?: (oldDate: string, newDate: string, postId: string, theme: string, newTime: string | null) => void
+  onPostConfirmed?: (postId: string, confirmed: boolean) => void
 }
 
-export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regenerating, isStreaming, scheduleId, accountId, accountConnected = false, mediaMap = {}, onMediaSaved, onPostAdded, onPostDeleted }: ScheduleCalendarProps) {
+export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regenerating, isStreaming, scheduleId, accountId, accountConnected = false, mediaMap = {}, onMediaSaved, onPostAdded, onPostDeleted, onPostRescheduled, onPostConfirmed }: ScheduleCalendarProps) {
   const firstDateStr = schedule.schedule[0]?.date
   const firstDate = firstDateStr ? new Date(firstDateStr + 'T12:00:00') : new Date()
 
@@ -86,6 +88,8 @@ export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regene
   const [selected, setSelected] = useState<SelectedPost | null>(null)
   const [addingPostDate, setAddingPostDate] = useState<string | null>(null)
   const [sessionMedia, setSessionMedia] = useState<Record<string, SessionMediaEntry>>({})
+  const [draggingPost, setDraggingPost] = useState<{ date: string; post: SchedulePost } | null>(null)
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null)
 
   // Zera sessionMedia apenas quando o cronograma muda de fato (geração nova ou troca de conta),
   // NÃO quando scheduleId é atribuído após o save de um cronograma já exibido.
@@ -192,9 +196,41 @@ export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regene
                 return (
                   <div
                     key={dateStr}
-                    className={`relative group bg-background min-h-[72px] p-1.5 flex flex-col gap-1 ${
-                      schedDay ? 'hover:bg-muted/40 transition-colors' : 'hover:bg-muted/20 transition-colors'
+                    className={`relative group bg-background min-h-[72px] p-1.5 flex flex-col gap-1 transition-colors ${
+                      dragOverDate === dateStr && draggingPost && draggingPost.date !== dateStr
+                        ? 'bg-primary/10 ring-inset ring-1 ring-primary/40'
+                        : schedDay ? 'hover:bg-muted/40' : 'hover:bg-muted/20'
                     }`}
+                    onDragOver={(e) => {
+                      if (!draggingPost || !scheduleId) return
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = 'move'
+                      setDragOverDate(dateStr)
+                    }}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverDate(null)
+                    }}
+                    onDrop={async (e) => {
+                      e.preventDefault()
+                      if (!draggingPost || !scheduleId) { setDraggingPost(null); setDragOverDate(null); return }
+                      const { date: oldDate, post: draggedPost } = draggingPost
+                      setDraggingPost(null)
+                      setDragOverDate(null)
+                      if (oldDate === dateStr) return
+                      const postId = mediaMap[`${oldDate}::${draggedPost.theme}`]?.postId
+                      if (!postId) return
+                      const res = await fetch(`/api/schedule/posts/${postId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: dateStr }),
+                      })
+                      if (res.ok) {
+                        onPostRescheduled?.(oldDate, dateStr, postId, draggedPost.theme, draggedPost.time || null)
+                        if (selected?.post.theme === draggedPost.theme && selected?.day.date === oldDate) {
+                          setSelected(null)
+                        }
+                      }
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <span className={`text-[11px] font-medium ${
@@ -219,13 +255,30 @@ export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regene
                         {schedDay.posts.map((post, i) => {
                           const type = safePostType(post.type)
                           const Icon = TYPE_ICONS[type]
+                          const postKey = `${dateStr}::${post.theme}`
+                          const isPostPublished = mediaMap[postKey]?.status === 'published'
                           return (
                             <button
                               key={i}
+                              draggable={!!scheduleId && !isStreaming && !isPostPublished}
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = 'move'
+                                setDraggingPost({ date: dateStr, post })
+                              }}
+                              onDragEnd={() => { setDraggingPost(null); setDragOverDate(null) }}
                               onClick={() => setSelected({ post, day: schedDay })}
-                              className={`flex items-center gap-1 text-[9px] px-1 py-0.5 rounded font-medium w-full text-left truncate ${TYPE_COLORS[type]}`}
+                              className={`flex items-center gap-1 text-[9px] px-1 py-0.5 rounded font-medium w-full text-left truncate ${
+                                isPostPublished
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 cursor-default opacity-70'
+                                  : `cursor-grab active:cursor-grabbing ${TYPE_COLORS[type]}`
+                              } ${
+                                draggingPost?.post.theme === post.theme && draggingPost?.date === dateStr ? 'opacity-40' : ''
+                              }`}
                             >
-                              <Icon className="size-2.5 shrink-0" />
+                              {isPostPublished
+                                ? <CheckCircle2 className="size-2.5 shrink-0" />
+                                : <Icon className="size-2.5 shrink-0" />
+                              }
                               <span className="truncate">{post.time || ''} {post.theme}</span>
                             </button>
                           )
@@ -264,6 +317,9 @@ export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regene
             )}
             onMediaSaved={onMediaSaved}
             onMediaGenerated={handleSessionMediaAdded}
+            onRescheduled={onPostRescheduled}
+            onConfirmed={onPostConfirmed}
+            accountConnected={accountConnected}
             onDeleted={() => {
               const { day, post } = selected
               const postId = mediaMap[`${day.date}::${post.theme}`]?.postId
@@ -304,6 +360,8 @@ export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regene
         accountConnected={accountConnected}
         onMediaSaved={onMediaSaved}
         onPostDeleted={onPostDeleted}
+        onPostRescheduled={onPostRescheduled}
+        onPostConfirmed={onPostConfirmed}
         onSelectPost={(post, day) => setSelected({ post, day })}
         sessionMedia={sessionMedia}
         onSessionMediaAdded={handleSessionMediaAdded}
@@ -328,6 +386,8 @@ interface PostGallerySectionProps {
   accountConnected?: boolean
   onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
   onPostDeleted?: (date: string, postId: string, theme: string) => void
+  onPostRescheduled?: (oldDate: string, newDate: string, postId: string, theme: string, newTime: string | null) => void
+  onPostConfirmed?: (postId: string, confirmed: boolean) => void
   onSelectPost?: (post: SchedulePost, day: ScheduleDay) => void
   sessionMedia: Record<string, SessionMediaEntry>
   onSessionMediaAdded: (key: string, src: string, mimeType: string) => void
@@ -340,6 +400,8 @@ function PostGallerySection({
   accountConnected = false,
   onMediaSaved,
   onPostDeleted,
+  onPostRescheduled,
+  onPostConfirmed,
   onSelectPost: _onSelectPost,
   sessionMedia,
   onSessionMediaAdded,
@@ -351,6 +413,14 @@ function PostGallerySection({
 
   const [expandedPost, setExpandedPost] = useState<{ day: ScheduleDay; post: SchedulePost } | null>(null)
   const [approved, setApproved] = useState<Set<string>>(new Set())
+  // confirmed: initialized from mediaMap prop
+  const [confirmedKeys, setConfirmedKeys] = useState<Set<string>>(() => {
+    const s = new Set<string>()
+    Object.entries(mediaMap).forEach(([k, v]) => { if (v.confirmed) s.add(k) })
+    return s
+  })
+  const [confirmingKeys, setConfirmingKeys] = useState<Set<string>>(new Set())
+  const [bulkConfirming, setBulkConfirming] = useState(false)
   const [bulkGenerating, setBulkGenerating] = useState(false)
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0, label: '' })
   const [generating, setGenerating] = useState<Set<string>>(new Set())
@@ -732,10 +802,86 @@ function PostGallerySection({
     exitSelectionMode()
   }
 
+  async function handleToggleConfirmGallery(key: string, postId: string, newValue: boolean) {
+    setConfirmingKeys(prev => new Set(prev).add(key))
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmed: newValue }),
+      })
+      if (res.ok) {
+        setConfirmedKeys(prev => {
+          const n = new Set(prev)
+          if (newValue) n.add(key); else n.delete(key)
+          return n
+        })
+        onPostConfirmed?.(postId, newValue)
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setConfirmingKeys(prev => { const n = new Set(prev); n.delete(key); return n })
+    }
+  }
+
+  async function handleBulkConfirm(newValue: boolean) {
+    const keys = Array.from(selectedKeys)
+    const postIds = keys.map(k => mediaMap[k]?.postId).filter(Boolean) as string[]
+    if (postIds.length === 0) return
+    setBulkConfirming(true)
+    try {
+      const res = await fetch('/api/schedule/posts/bulk-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postIds, confirmed: newValue }),
+      })
+      if (res.ok) {
+        setConfirmedKeys(prev => {
+          const n = new Set(prev)
+          keys.forEach(k => { if (newValue) n.add(k); else n.delete(k) })
+          return n
+        })
+        postIds.forEach(id => onPostConfirmed?.(id, newValue))
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setBulkConfirming(false)
+      exitSelectionMode()
+    }
+  }
+
+  async function handleConfirmAll() {
+    const allKeys = allPosts.map(({ day, post }) => `${day.date}::${post.theme}`)
+    const allPostIds = allKeys.map(k => mediaMap[k]?.postId).filter(Boolean) as string[]
+    if (allPostIds.length === 0) return
+    setBulkConfirming(true)
+    try {
+      const res = await fetch('/api/schedule/posts/bulk-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postIds: allPostIds, confirmed: true }),
+      })
+      if (res.ok) {
+        setConfirmedKeys(new Set(allKeys))
+        allPostIds.forEach(id => onPostConfirmed?.(id, true))
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setBulkConfirming(false)
+    }
+  }
+
   const pendingCount = allPosts.filter(({ day, post }) => {
     const key = `${day.date}::${post.theme}`
     return !sessionMedia[key] && !mediaMap[key]?.imageUrl && !mediaMap[key]?.videoUrl
   }).length
+
+  const confirmedCount = allPosts.filter(({ day, post }) =>
+    confirmedKeys.has(`${day.date}::${post.theme}`)
+  ).length
 
   return (
     <div className="space-y-3">
@@ -837,16 +983,28 @@ function PostGallerySection({
                 {selectedKeys.size === allPosts.length ? 'Desmarcar todos' : 'Selecionar todos'}
               </button>
               {selectedKeys.size > 0 && (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="h-8 gap-1.5 text-xs"
-                  disabled={bulkDeleting}
-                  onClick={() => setConfirmBulkDelete(true)}
-                >
-                  <Trash2 className="size-3" />
-                  Apagar {selectedKeys.size}
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                    disabled={bulkConfirming}
+                    onClick={() => handleBulkConfirm(true)}
+                  >
+                    {bulkConfirming ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+                    Confirmar {selectedKeys.size}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-8 gap-1.5 text-xs"
+                    disabled={bulkDeleting}
+                    onClick={() => setConfirmBulkDelete(true)}
+                  >
+                    <Trash2 className="size-3" />
+                    Apagar {selectedKeys.size}
+                  </Button>
+                </>
               )}
               <button
                 onClick={exitSelectionMode}
@@ -857,11 +1015,26 @@ function PostGallerySection({
             </>
           ) : (
             <>
+              {confirmedCount > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-emerald-600">{confirmedCount}</span>/{allPosts.length} confirmados
+                </span>
+              )}
               {approvedCount > 0 && (
                 <span className="text-xs text-muted-foreground">
                   <span className="font-semibold text-green-600">{approvedCount}</span>/{allPosts.length} aprovados
                 </span>
               )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                disabled={bulkConfirming || confirmedCount === allPosts.length}
+                onClick={handleConfirmAll}
+              >
+                {bulkConfirming ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />}
+                Confirmar todos
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -939,6 +1112,17 @@ function PostGallerySection({
             setConfirmingDelete({ key, day: expandedPost.day, post: expandedPost.post })
             setExpandedPost(null)
           }}
+          onRescheduled={onPostRescheduled}
+          onConfirmed={(postId, confirmed) => {
+            const key = `${expandedPost.day.date}::${expandedPost.post.theme}`
+            setConfirmedKeys(prev => {
+              const n = new Set(prev)
+              if (confirmed) n.add(key); else n.delete(key)
+              return n
+            })
+            onPostConfirmed?.(postId, confirmed)
+          }}
+          accountConnected={accountConnected}
           onClose={() => setExpandedPost(null)}
         />
       )}
@@ -951,6 +1135,8 @@ function PostGallerySection({
           const Icon = TYPE_ICONS[type]
           const isGenerating = generating.has(key)
           const isApproved = approved.has(key)
+          const isConfirmedCard = confirmedKeys.has(key)
+          const isConfirmingCard = confirmingKeys.has(key)
           const isDeleting = deleting.has(key)
           const isPublishing = publishing.has(key)
           const mapEntry = mediaMap[key]
@@ -984,6 +1170,8 @@ function PostGallerySection({
               className={`rounded-xl border-2 overflow-hidden flex flex-col transition-colors ${
                 selectionMode && isSelected
                   ? 'border-primary ring-2 ring-primary/30'
+                  : isPublished ? 'border-green-500 ring-1 ring-green-500/30 opacity-80'
+                  : isConfirmedCard ? 'border-emerald-500 ring-1 ring-emerald-500/20'
                   : isApproved ? 'border-green-500' : 'border-border'
               }`}
             >
@@ -1037,8 +1225,18 @@ function PostGallerySection({
                   </div>
                 )}
 
+                {/* Published overlay */}
+                {isPublished && !selectionMode && (
+                  <div className="absolute inset-0 bg-black/30 flex items-end">
+                    <div className="w-full bg-green-500/90 text-white text-[10px] font-semibold flex items-center justify-center gap-1 py-1">
+                      <CheckCircle2 className="size-3" />
+                      Publicado
+                    </div>
+                  </div>
+                )}
+
                 {/* Approved badge */}
-                {isApproved && !selectionMode && (
+                {isApproved && !isPublished && !selectionMode && (
                   <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-0.5">
                     <CheckCircle2 className="size-3.5" />
                   </div>
@@ -1057,10 +1255,15 @@ function PostGallerySection({
                       <Clock className="size-2.5" />{post.time}
                     </span>
                   )}
-                  {/* Badges de publicação */}
+                  {/* Badges de publicação / confirmação */}
                   {isPublished && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 font-medium">
                       Publicado
+                    </span>
+                  )}
+                  {isConfirmedCard && !isPublished && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-medium flex items-center gap-0.5">
+                      <CheckCircle2 className="size-2.5" />Agendado
                     </span>
                   )}
                   {publishError && !isPublished && (
@@ -1074,108 +1277,144 @@ function PostGallerySection({
               </div>
 
               {/* Action buttons — hidden in selection mode */}
-              <div className={`px-2 pb-2 flex items-center gap-1 ${selectionMode ? 'invisible' : ''}`}>
-                {/* Approve toggle */}
-                <button
-                  onClick={() => setApproved(prev => {
-                    const n = new Set(prev)
-                    if (n.has(key)) n.delete(key); else n.add(key)
-                    return n
-                  })}
-                  className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-medium py-1.5 rounded-lg transition-colors ${
-                    isApproved
-                      ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-500/20'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-                  }`}
-                  title={isApproved ? 'Remover aprovação' : 'Aprovar'}
-                >
-                  <CheckCircle2 className="size-3" />
-                  {isApproved ? 'Aprovado' : 'Aprovar'}
-                </button>
-
-                {/* Download */}
-                {hasMedia && (
-                  <button
-                    onClick={() => {
-                      const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
-                      const a = document.createElement('a')
-                      a.href = thumbSrc!
-                      a.download = thumbIsVideo ? `${slug}.mp4` : `${slug}.png`
-                      a.click()
-                    }}
-                    className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    title="Baixar mídia"
-                  >
-                    <Download className="size-3.5" />
-                  </button>
-                )}
-
-                {/* Regenerate */}
-                {post.type === 'reel' && showDurationPicker === key ? (
-                  <div className="flex items-center gap-1">
-                    {([4, 6, 8] as const).map(d => (
+              <div className={`px-2 pb-2 flex items-center gap-1 flex-wrap ${selectionMode ? 'invisible' : ''}`}>
+                {isPublished ? (
+                  /* Post publicado: só download e delete */
+                  <>
+                    {hasMedia && (
                       <button
-                        key={d}
                         onClick={() => {
-                          setCalendarReelDuration(d)
-                          setShowDurationPicker(null)
-                          generateForPost(day, post)
+                          const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
+                          const a = document.createElement('a')
+                          a.href = thumbSrc!
+                          a.download = thumbIsVideo ? `${slug}.mp4` : `${slug}.png`
+                          a.click()
                         }}
-                        className={`text-[10px] px-1.5 py-1 rounded border transition-colors ${
-                          calendarReelDuration === d
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'border-input hover:border-primary/60 text-muted-foreground bg-background'
-                        }`}
+                        className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        title="Baixar mídia"
                       >
-                        {d}s
+                        <Download className="size-3.5" />
                       </button>
-                    ))}
+                    )}
+                    <div className="flex-1" />
                     <button
-                      onClick={() => setShowDurationPicker(null)}
-                      className="p-1 rounded text-muted-foreground hover:text-foreground text-[10px]"
-                    >✕</button>
-                  </div>
+                      onClick={() => setConfirmingDelete({ key, day, post })}
+                      disabled={!scheduleId || isDeleting}
+                      className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Apagar post"
+                    >
+                      {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                    </button>
+                  </>
                 ) : (
-                  <button
-                    onClick={() => {
-                      if (post.type === 'reel') {
-                        setShowDurationPicker(key)
-                      } else {
-                        generateForPost(day, post)
-                      }
-                    }}
-                    disabled={isGenerating || bulkGenerating}
-                    className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    title={post.type === 'reel' ? 'Selecionar duração e regenerar' : 'Regenerar mídia'}
-                  >
-                    <RefreshCw className={`size-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
-                  </button>
-                )}
+                  /* Post não publicado: ações completas */
+                  <>
+                    {/* Publicar agora — botão em destaque */}
+                    {accountConnected && mapEntry?.postId && (
+                      <button
+                        onClick={() => handlePublishNow(key, mapEntry.postId)}
+                        disabled={isPublishing}
+                        className={`flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 px-2 rounded-lg transition-colors flex-1 ${
+                          hasMedia
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        title="Publicar agora no Instagram"
+                      >
+                        {isPublishing ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}
+                        {isPublishing ? 'Publicando...' : 'Publicar'}
+                      </button>
+                    )}
 
-                {/* Publish now */}
-                {accountConnected && hasMedia && !isPublished && mapEntry?.postId && (
-                  <button
-                    onClick={() => handlePublishNow(key, mapEntry.postId)}
-                    disabled={isPublishing}
-                    className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="Publicar agora no Instagram"
-                  >
-                    {isPublishing
-                      ? <Loader2 className="size-3.5 animate-spin" />
-                      : <Send className="size-3.5" />
-                    }
-                  </button>
-                )}
+                    {/* Download */}
+                    {hasMedia && (
+                      <button
+                        onClick={() => {
+                          const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
+                          const a = document.createElement('a')
+                          a.href = thumbSrc!
+                          a.download = thumbIsVideo ? `${slug}.mp4` : `${slug}.png`
+                          a.click()
+                        }}
+                        className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        title="Baixar mídia"
+                      >
+                        <Download className="size-3.5" />
+                      </button>
+                    )}
 
-                {/* Delete */}
-                <button
-                  onClick={() => setConfirmingDelete({ key, day, post })}
-                  disabled={!scheduleId || isDeleting}
-                  className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  title={scheduleId ? 'Apagar post' : 'Salve o cronograma para apagar posts'}
-                >
-                  {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-                </button>
+                    {/* Regenerate */}
+                    {post.type === 'reel' && showDurationPicker === key ? (
+                      <div className="flex items-center gap-1">
+                        {([4, 6, 8] as const).map(d => (
+                          <button
+                            key={d}
+                            onClick={() => {
+                              setCalendarReelDuration(d)
+                              setShowDurationPicker(null)
+                              generateForPost(day, post)
+                            }}
+                            className={`text-[10px] px-1.5 py-1 rounded border transition-colors ${
+                              calendarReelDuration === d
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'border-input hover:border-primary/60 text-muted-foreground bg-background'
+                            }`}
+                          >
+                            {d}s
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => setShowDurationPicker(null)}
+                          className="p-1 rounded text-muted-foreground hover:text-foreground text-[10px]"
+                        >✕</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (post.type === 'reel') {
+                            setShowDurationPicker(key)
+                          } else {
+                            generateForPost(day, post)
+                          }
+                        }}
+                        disabled={isGenerating || bulkGenerating}
+                        className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={post.type === 'reel' ? 'Selecionar duração e regenerar' : 'Regenerar mídia'}
+                      >
+                        <RefreshCw className={`size-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+                      </button>
+                    )}
+
+                    {/* Confirmar agendamento */}
+                    {mapEntry?.postId && (
+                      <button
+                        onClick={() => handleToggleConfirmGallery(key, mapEntry.postId, !isConfirmedCard)}
+                        disabled={isConfirmingCard}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          isConfirmedCard
+                            ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                            : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-emerald-600'
+                        }`}
+                        title={isConfirmedCard ? 'Cancelar confirmação de agendamento' : 'Confirmar agendamento'}
+                      >
+                        {isConfirmingCard
+                          ? <Loader2 className="size-3.5 animate-spin" />
+                          : <CheckCircle2 className="size-3.5" />
+                        }
+                      </button>
+                    )}
+
+                    {/* Delete */}
+                    <button
+                      onClick={() => setConfirmingDelete({ key, day, post })}
+                      disabled={!scheduleId || isDeleting}
+                      className="p-1.5 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={scheduleId ? 'Apagar post' : 'Salve o cronograma para apagar posts'}
+                    >
+                      {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )
@@ -1200,9 +1439,12 @@ function PostExpandedModal({
   persistedSceneUrls,
   onMediaSaved,
   scheduleId,
-  isApproved,
-  onApproveToggle,
+  isApproved: _isApproved,
+  onApproveToggle: _onApproveToggle,
   onDeleteRequest,
+  onRescheduled,
+  onConfirmed,
+  accountConnected,
   onClose,
 }: {
   post: SchedulePost
@@ -1210,7 +1452,7 @@ function PostExpandedModal({
   mediaKey: string
   sessionMedia: Record<string, SessionMediaEntry>
   onSessionMediaAdded: (key: string, src: string, mimeType: string) => void
-  mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string } | null
+  mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string; confirmed?: boolean; status?: string } | null
   persistedSlideUrls?: (string | null)[]
   persistedSceneUrls?: (string | null)[]
   onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
@@ -1218,6 +1460,9 @@ function PostExpandedModal({
   isApproved: boolean
   onApproveToggle: () => void
   onDeleteRequest: () => void
+  onRescheduled?: (oldDate: string, newDate: string, postId: string, theme: string, newTime: string | null) => void
+  onConfirmed?: (postId: string, confirmed: boolean) => void
+  accountConnected?: boolean
   onClose: () => void
 }) {
   const type = safePostType(post.type)
@@ -1230,6 +1475,21 @@ function PostExpandedModal({
 
   const [activeSlide, setActiveSlide] = useState(0)
   const [activeScene, setActiveScene] = useState(0)
+
+  // Bloqueia scroll do container principal enquanto o modal está aberto
+  useEffect(() => {
+    // O scroll real é no <main>, não no body
+    const mainEl = document.querySelector('main') as HTMLElement | null
+    const prevMain = mainEl?.style.overflow ?? ''
+    const prevBody = document.body.style.overflow
+    if (mainEl) mainEl.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    return () => {
+      if (mainEl) mainEl.style.overflow = prevMain
+      document.body.style.overflow = prevBody
+    }
+  }, [])
+
   const [generating, setGenerating] = useState(false)
   const [generatingSlide, setGeneratingSlide] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -1241,6 +1501,88 @@ function PostExpandedModal({
 
   const scheduleIdRef = useRef(scheduleId)
   scheduleIdRef.current = scheduleId
+
+  const [modalEditingSchedule, setModalEditingSchedule] = useState(false)
+  const [modalRescheduleDate, setModalRescheduleDate] = useState(day.date)
+  const [modalRescheduleTime, setModalRescheduleTime] = useState(post.time ?? '')
+  const [modalRescheduleSaving, setModalRescheduleSaving] = useState(false)
+  const [modalRescheduleError, setModalRescheduleError] = useState<string | null>(null)
+
+  const [modalConfirmed, setModalConfirmed] = useState(mediaEntry?.confirmed ?? false)
+  const [modalConfirmingSave, setModalConfirmingSave] = useState(false)
+  const modalIsPublished = mediaEntry?.status === 'published'
+  const [modalPublishedLocal, setModalPublishedLocal] = useState(false)
+  const [modalPublishingNow, setModalPublishingNow] = useState(false)
+  const [modalPublishError, setModalPublishError] = useState<string | null>(null)
+  const modalIsFullyPublished = modalIsPublished || modalPublishedLocal
+
+  async function handleModalPublishNow() {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    setModalPublishingNow(true)
+    setModalPublishError(null)
+    try {
+      const res = await fetch(`/api/instagram/publish/${postId}`, { method: 'POST' })
+      if (res.ok) {
+        setModalPublishedLocal(true)
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        setModalPublishError(data.error ?? 'Erro ao publicar')
+      }
+    } catch {
+      setModalPublishError('Erro de rede')
+    } finally {
+      setModalPublishingNow(false)
+    }
+  }
+
+  async function handleModalToggleConfirm() {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    const newValue = !modalConfirmed
+    setModalConfirmingSave(true)
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmed: newValue }),
+      })
+      if (res.ok) {
+        setModalConfirmed(newValue)
+        onConfirmed?.(postId, newValue)
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setModalConfirmingSave(false)
+    }
+  }
+
+  async function handleModalReschedule() {
+    if (!modalRescheduleDate) return
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    setModalRescheduleSaving(true)
+    setModalRescheduleError(null)
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: modalRescheduleDate, time: modalRescheduleTime || null }),
+      })
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error ?? 'Erro ao reagendar')
+      }
+      onRescheduled?.(day.date, modalRescheduleDate, postId, post.theme, modalRescheduleTime || null)
+      setModalEditingSchedule(false)
+      onClose()
+    } catch (err) {
+      setModalRescheduleError(err instanceof Error ? err.message : 'Erro ao reagendar')
+    } finally {
+      setModalRescheduleSaving(false)
+    }
+  }
 
   // Upload silencioso após gerar
   async function uploadMedia(base64: string, mimeType: 'image/png' | 'image/jpeg' | 'video/mp4') {
@@ -2011,37 +2353,132 @@ function PostExpandedModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t flex items-center gap-2 shrink-0 bg-background">
-          <button
-            onClick={onApproveToggle}
-            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg transition-colors ${
-              isApproved
-                ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-500/20'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-            }`}
-          >
-            <CheckCircle2 className="size-3.5" />
-            {isApproved ? 'Aprovado' : 'Aprovar'}
-          </button>
+        <div className={`px-5 py-3 border-t flex items-center gap-2 shrink-0 flex-wrap ${modalIsFullyPublished ? 'bg-green-50/40 dark:bg-green-950/10' : 'bg-background'}`}>
+          {modalIsFullyPublished ? (
+            /* Estado publicado — footer simplificado */
+            <>
+              <div className="flex-1 flex items-center gap-1.5 text-xs font-medium text-green-600">
+                <CheckCircle2 className="size-3.5" />
+                Publicado no Instagram
+              </div>
+              {hasMedia && (
+                <button
+                  onClick={isMultiFrameModal ? () => handleDownloadSlide(activeSlide) : handleDownloadMain}
+                  className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-4 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-transparent"
+                >
+                  <Download className="size-3.5" />
+                  Baixar
+                </button>
+              )}
+              <button
+                onClick={onDeleteRequest}
+                className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-4 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors border border-transparent"
+              >
+                <Trash2 className="size-3.5" />
+                Apagar
+              </button>
+            </>
+          ) : (
+            /* Estado normal */
+            <>
+              {hasMedia && (
+                <button
+                  onClick={isMultiFrameModal ? () => handleDownloadSlide(activeSlide) : handleDownloadMain}
+                  className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-3 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-transparent"
+                >
+                  <Download className="size-3.5" />
+                  Baixar
+                </button>
+              )}
 
-          {hasMedia && (
-            <button
-              onClick={isMultiFrameModal ? () => handleDownloadSlide(activeSlide) : handleDownloadMain}
-              className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-4 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-transparent"
-            >
-              <Download className="size-3.5" />
-              Baixar
-            </button>
+              {mediaEntry?.postId && (
+                <button
+                  onClick={() => { setModalRescheduleDate(day.date); setModalRescheduleTime(post.time ?? ''); setModalEditingSchedule(v => !v) }}
+                  className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-3 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-primary transition-colors border border-transparent"
+                >
+                  <Calendar className="size-3.5" />
+                  Reagendar
+                </button>
+              )}
+
+              {mediaEntry?.postId && (
+                <button
+                  onClick={handleModalToggleConfirm}
+                  disabled={modalConfirmingSave}
+                  className={`flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-3 rounded-lg transition-colors border ${
+                    modalConfirmed
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200 hover:bg-emerald-500/20'
+                      : 'bg-muted/50 text-muted-foreground border-transparent hover:bg-muted hover:text-emerald-600'
+                  }`}
+                >
+                  {modalConfirmingSave ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+                  {modalConfirmed ? 'Confirmado ✓' : 'Confirmar'}
+                </button>
+              )}
+
+              {accountConnected && mediaEntry?.postId && (
+                <button
+                  onClick={handleModalPublishNow}
+                  disabled={modalPublishingNow}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {modalPublishingNow ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+                  Publicar agora
+                </button>
+              )}
+
+              {modalPublishError && (
+                <p className="w-full text-[10px] text-destructive">{modalPublishError}</p>
+              )}
+
+              <button
+                onClick={onDeleteRequest}
+                className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-3 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors border border-transparent"
+              >
+                <Trash2 className="size-3.5" />
+                Apagar
+              </button>
+            </>
           )}
-
-          <button
-            onClick={onDeleteRequest}
-            className="flex items-center justify-center gap-1.5 text-xs font-medium py-2 px-4 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-destructive transition-colors border border-transparent"
-          >
-            <Trash2 className="size-3.5" />
-            Apagar
-          </button>
         </div>
+
+        {/* Inline reschedule form */}
+        {modalEditingSchedule && (
+          <div className="px-5 pb-4 space-y-2 border-t pt-3">
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={modalRescheduleDate}
+                onChange={e => setModalRescheduleDate(e.target.value)}
+                className="flex-1 text-xs border rounded-md px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <input
+                type="time"
+                value={modalRescheduleTime}
+                onChange={e => setModalRescheduleTime(e.target.value)}
+                className="w-24 text-xs border rounded-md px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            {modalRescheduleError && <p className="text-xs text-destructive">{modalRescheduleError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={handleModalReschedule}
+                disabled={modalRescheduleSaving || !modalRescheduleDate}
+                className="flex-1 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-1"
+              >
+                {modalRescheduleSaving ? <Loader2 className="size-3 animate-spin" /> : <Pencil className="size-3" />}
+                Salvar reagendamento
+              </button>
+              <button
+                onClick={() => { setModalEditingSchedule(false); setModalRescheduleError(null) }}
+                disabled={modalRescheduleSaving}
+                className="text-xs text-muted-foreground border rounded-md px-3 py-1.5 hover:bg-muted transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -2174,16 +2611,19 @@ function buildSceneVideoPrompt(post: SchedulePost, sceneIdx: number): string {
   ].filter(Boolean).join(' ')
 }
 
-function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedSceneUrls, onMediaSaved, onDeleted, onMediaGenerated }: {
+function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedSceneUrls, onMediaSaved, onDeleted, onMediaGenerated, onRescheduled, onConfirmed, accountConnected }: {
   post: SchedulePost
   day: ScheduleDay
   onClose: () => void
   scheduleId?: string | null
-  mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string } | null
+  mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string; confirmed?: boolean; status?: string } | null
   persistedSceneUrls?: (string | null)[]
   onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
   onDeleted?: () => void
   onMediaGenerated?: (key: string, src: string, mimeType: string) => void
+  onRescheduled?: (oldDate: string, newDate: string, postId: string, theme: string, newTime: string | null) => void
+  onConfirmed?: (postId: string, confirmed: boolean) => void
+  accountConnected?: boolean
 }) {
   const type = safePostType(post.type)
   const Icon = TYPE_ICONS[type]
@@ -2226,6 +2666,89 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [generatingAll, setGeneratingAll] = useState(false)
+  const [editingSchedule, setEditingSchedule] = useState(false)
+  const [rescheduleDate, setRescheduleDate] = useState(day.date)
+  const [rescheduleTime, setRescheduleTime] = useState(post.time ?? '')
+  const [rescheduleSaving, setRescheduleSaving] = useState(false)
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null)
+
+  const [isConfirmed, setIsConfirmed] = useState(mediaEntry?.confirmed ?? false)
+  const [confirmingSave, setConfirmingSave] = useState(false)
+  const isPublished = mediaEntry?.status === 'published'
+  const [publishingNow, setPublishingNow] = useState(false)
+  const [publishedLocal, setPublishedLocal] = useState(false)
+  const [publishNowError, setPublishNowError] = useState<string | null>(null)
+  const isFullyPublished = isPublished || publishedLocal
+
+  async function handlePublishNow() {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    setPublishingNow(true)
+    setPublishNowError(null)
+    try {
+      const res = await fetch(`/api/instagram/publish/${postId}`, { method: 'POST' })
+      if (res.ok) {
+        setPublishedLocal(true)
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        setPublishNowError(data.error ?? 'Erro ao publicar')
+      }
+    } catch {
+      setPublishNowError('Erro de rede')
+    } finally {
+      setPublishingNow(false)
+    }
+  }
+
+  async function handleToggleConfirm() {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    const newValue = !isConfirmed
+    setConfirmingSave(true)
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmed: newValue }),
+      })
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error ?? 'Erro ao confirmar agendamento')
+      }
+      setIsConfirmed(newValue)
+      onConfirmed?.(postId, newValue)
+    } catch {
+      // revert silently
+    } finally {
+      setConfirmingSave(false)
+    }
+  }
+
+  async function handleReschedule() {
+    if (!rescheduleDate) return
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    setRescheduleSaving(true)
+    setRescheduleError(null)
+    try {
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: rescheduleDate, time: rescheduleTime || null }),
+      })
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error ?? 'Erro ao reagendar')
+      }
+      onRescheduled?.(day.date, rescheduleDate, postId, post.theme, rescheduleTime || null)
+      setEditingSchedule(false)
+      onClose()
+    } catch (err) {
+      setRescheduleError(err instanceof Error ? err.message : 'Erro ao reagendar')
+    } finally {
+      setRescheduleSaving(false)
+    }
+  }
 
   async function handleDelete() {
     const postId = mediaEntry?.postId
@@ -2630,8 +3153,8 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
   }
 
   return (
-    <Card className="sticky top-6 overflow-hidden">
-      <div className="px-4 py-3 border-b flex items-start justify-between gap-3">
+    <Card className={`sticky top-6 overflow-hidden ${isFullyPublished ? 'ring-2 ring-green-500/40 border-green-500/50' : ''}`}>
+      <div className={`px-4 py-3 border-b flex items-start justify-between gap-3 ${isFullyPublished ? 'bg-green-50/50 dark:bg-green-950/20' : ''}`}>
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${TYPE_COLORS[type]}`}>
             <Icon className="size-3" />
@@ -2640,6 +3163,11 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
           {post.time && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="size-3" />{post.time}
+            </span>
+          )}
+          {isFullyPublished && (
+            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500 text-white font-medium">
+              <CheckCircle2 className="size-3" />Publicado
             </span>
           )}
         </div>
@@ -2679,17 +3207,111 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
         </div>
       </div>
 
-      <CardContent className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+      <CardContent
+        className="p-4 space-y-4 max-h-[70vh] overflow-y-auto"
+        onWheel={(e) => e.stopPropagation()}
+      >
         <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">{day.day_label}</p>
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+              {editingSchedule ? 'Reagendar post' : day.day_label}
+            </p>
+            {mediaEntry?.postId && !editingSchedule && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {!isFullyPublished && (
+                  <>
+                    <button
+                      onClick={handleToggleConfirm}
+                      disabled={confirmingSave}
+                      className={`flex items-center gap-1 text-[10px] font-medium transition-colors ${
+                        isConfirmed
+                          ? 'text-emerald-600 hover:text-emerald-700'
+                          : 'text-muted-foreground hover:text-primary'
+                      }`}
+                      title={isConfirmed ? 'Cancelar confirmação' : 'Confirmar agendamento'}
+                    >
+                      {confirmingSave
+                        ? <Loader2 className="size-3 animate-spin" />
+                        : isConfirmed
+                          ? <CheckCircle2 className="size-3" />
+                          : <Calendar className="size-3" />
+                      }
+                      {isConfirmed ? 'Confirmado' : 'Confirmar'}
+                    </button>
+                    <button
+                      onClick={() => { setRescheduleDate(day.date); setRescheduleTime(post.time ?? ''); setEditingSchedule(true) }}
+                      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                      title="Reagendar"
+                    >
+                      <Pencil className="size-3" />
+                      Reagendar
+                    </button>
+                  </>
+                )}
+                {accountConnected && !isFullyPublished && (
+                  <button
+                    onClick={handlePublishNow}
+                    disabled={publishingNow}
+                    className="flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+                    title="Publicar agora no Instagram"
+                  >
+                    {publishingNow ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}
+                    Publicar agora
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <h3 className="font-semibold text-sm leading-snug">{post.theme}</h3>
-          {post.content_pillar && (
-            <Badge variant="outline" className="text-[10px] h-4 mt-1.5">{post.content_pillar}</Badge>
-          )}
-          {post.seasonal_hook && (
-            <Badge className="text-[10px] h-4 mt-1 ml-1 bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300">
-              🗓 {post.seasonal_hook}
-            </Badge>
+          {editingSchedule ? (
+            <div className="space-y-2 mt-2">
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  onChange={e => setRescheduleDate(e.target.value)}
+                  className="flex-1 text-xs border rounded-md px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <input
+                  type="time"
+                  value={rescheduleTime}
+                  onChange={e => setRescheduleTime(e.target.value)}
+                  className="w-24 text-xs border rounded-md px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              {rescheduleError && <p className="text-xs text-destructive">{rescheduleError}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleReschedule}
+                  disabled={rescheduleSaving || !rescheduleDate}
+                  className="flex-1 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-1"
+                >
+                  {rescheduleSaving ? <Loader2 className="size-3 animate-spin" /> : <Pencil className="size-3" />}
+                  Salvar
+                </button>
+                <button
+                  onClick={() => { setEditingSchedule(false); setRescheduleError(null) }}
+                  disabled={rescheduleSaving}
+                  className="text-xs text-muted-foreground border rounded-md px-3 py-1.5 hover:bg-muted transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {publishNowError && (
+                <p className="text-[10px] text-destructive mt-1">{publishNowError}</p>
+              )}
+              {post.content_pillar && (
+                <Badge variant="outline" className="text-[10px] h-4 mt-1.5">{post.content_pillar}</Badge>
+              )}
+              {post.seasonal_hook && (
+                <Badge className="text-[10px] h-4 mt-1 ml-1 bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300">
+                  🗓 {post.seasonal_hook}
+                </Badge>
+              )}
+            </>
           )}
         </div>
 

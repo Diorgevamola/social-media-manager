@@ -66,3 +66,35 @@ export async function DELETE(
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const auth = await authenticateRequest(request)
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId, supabase } = auth
+
+    const { id } = await params
+    const body = await request.json() as { date?: string; time?: string | null; confirmed?: boolean }
+
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (body.date !== undefined) updates.date = body.date
+    if ('time' in body) updates.time = body.time ?? null
+    if (body.confirmed !== undefined) updates.confirmed = body.confirmed
+
+    const { error } = await supabase
+      .from('schedule_posts')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro ao atualizar post'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}

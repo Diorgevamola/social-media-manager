@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DisconnectAccountButton } from '@/components/instagram/disconnect-button'
+import { DisconnectMetaButton } from '@/components/instagram/disconnect-meta-button'
 import { EditAccountDialog } from '@/components/instagram/edit-account-dialog'
 
 interface AccountCardProps {
@@ -58,9 +59,12 @@ export function AccountCard({ account }: AccountCardProps) {
                 <Badge variant="default" className="text-[10px] h-4">Ativo</Badge>
               )}
               {isMetaConnected ? (
-                <Badge className="text-[10px] h-4 bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300">
-                  Conectado ao Meta
-                </Badge>
+                <div className="flex items-center gap-1">
+                  <Badge className="text-[10px] h-4 bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300">
+                    Conectado ao Meta
+                  </Badge>
+                  <DisconnectMetaButton accountId={account.id} username={account.username} />
+                </div>
               ) : (
                 <a href={`/api/instagram/connect?accountId=${account.id}`}>
                   <Button size="sm" variant="outline" className="h-5 text-[10px] px-2">

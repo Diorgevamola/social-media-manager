@@ -18,11 +18,12 @@ export async function GET(request: Request) {
   const supabase = await createClient()
   const now = new Date()
 
-  // ── 1. Reels com container pendente ─────────────────────────────────────────
+  // ── 1. Reels com container pendente (confirmados) ────────────────────────────
   const { data: pendingReels } = await supabase
     .from('schedule_posts')
     .select('id, ig_container_id, schedule_id, publish_attempts')
     .eq('status', 'planned')
+    .eq('confirmed', true)
     .not('ig_container_id', 'is', null)
     .lt('publish_attempts', 5)
 
@@ -64,11 +65,12 @@ export async function GET(request: Request) {
     }
   }
 
-  // ── 2. Posts novos com horário vencido ────────────────────────────────────────
+  // ── 2. Posts confirmados com horário vencido ─────────────────────────────────
   const { data: posts } = await supabase
     .from('schedule_posts')
     .select('*')
     .eq('status', 'planned')
+    .eq('confirmed', true)
     .is('ig_container_id', null)
     .lt('publish_attempts', 3)
     .or('generated_image_url.not.is.null,generated_video_url.not.is.null')

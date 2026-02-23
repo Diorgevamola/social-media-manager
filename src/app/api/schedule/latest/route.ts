@@ -74,6 +74,8 @@ export async function GET(request: Request) {
         imageUrl: p.generated_image_url,
         videoUrl: p.generated_video_url,
         postId: p.id,
+        confirmed: p.confirmed ?? false,
+        status: p.status,
       }
 
       // Populate per-slide and per-scene keys for recovery

@@ -9,6 +9,7 @@ export type MediaMap = Record<string, {
   imageUrl: string | null
   videoUrl: string | null
   postId: string
+  confirmed?: boolean
   status?: 'planned' | 'published'
   publishError?: string | null
 }>
@@ -39,6 +40,7 @@ function buildScheduleFromPosts(
       imageUrl: p.generated_image_url,
       videoUrl: p.generated_video_url,
       postId: p.id,
+      confirmed: p.confirmed ?? false,
       status: p.status,
       publishError: p.publish_error ?? null,
     }
