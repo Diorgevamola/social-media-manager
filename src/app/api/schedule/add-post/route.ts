@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-key-auth'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import { z } from 'zod'
 import type { SchedulePost } from '@/types/schedule'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
 
 const schema = z.object({
   scheduleId: z.string().uuid(),
@@ -176,8 +175,12 @@ export async function POST(request: Request) {
       description,
     })
 
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: { thinkingConfig: { thinkingBudget: 0 } },
+    })
+    const text = result.text ?? ''
 
     // Parse JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/)

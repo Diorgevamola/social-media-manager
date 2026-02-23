@@ -10,7 +10,7 @@ interface LogoMarkProps {
  * Branco puro ou com barra central vermelha (accent)
  */
 export function LogoMark({ size = 24, accent = false, className }: LogoMarkProps) {
-  const centerColor = accent ? '#E8102E' : '#FFFFFF'
+  const centerColor = accent ? 'var(--primary)' : 'currentColor'
 
   return (
     <svg
@@ -20,14 +20,16 @@ export function LogoMark({ size = 24, accent = false, className }: LogoMarkProps
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      role="img"
+      aria-label="Social Manager"
     >
-      {/* Barra esquerda — média */}
-      <rect x="3" y="11" width="3" height="11" rx="1.5" fill="#FFFFFF" />
-      {/* Barra central — mais alta */}
+      {/* Barra esquerda - media */}
+      <rect x="3" y="11" width="3" height="11" rx="1.5" fill="currentColor" />
+      {/* Barra central - mais alta */}
       <rect x="9" y="5" width="3" height="17" rx="1.5" fill={centerColor} />
-      {/* Barra direita — curta */}
-      <rect x="15" y="15" width="3" height="7" rx="1.5" fill="#FFFFFF" />
-      {/* Dot acima da barra central — sinal de broadcast */}
+      {/* Barra direita - curta */}
+      <rect x="15" y="15" width="3" height="7" rx="1.5" fill="currentColor" />
+      {/* Dot acima da barra central - sinal de broadcast */}
       <circle cx="10.5" cy="2.5" r="1.5" fill={centerColor} />
     </svg>
   )

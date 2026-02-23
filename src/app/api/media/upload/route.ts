@@ -11,6 +11,7 @@ const schema = z.object({
   data: z.string(), // base64
   mimeType: z.enum(['image/png', 'image/jpeg', 'video/mp4']),
   slideIndex: z.number().int().min(0).optional(), // carousel slide
+  sceneIndex: z.number().int().min(0).optional(), // reel scene
 })
 
 /**
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
 
-    const { postId, mediaType, data, mimeType, slideIndex } = parsed.data
+    const { postId, mediaType, data, mimeType, slideIndex, sceneIndex } = parsed.data
 
     // Verify ownership
     const { data: post, error: postError } = await supabase
@@ -53,11 +54,14 @@ export async function POST(request: Request) {
 
     const ext = mimeType === 'video/mp4' ? 'mp4' : mimeType === 'image/jpeg' ? 'jpg' : 'png'
 
-    // Carousel slides use a separate path per slide index
+    // Carousel slides and reel scenes use separate paths
     const isSlide = slideIndex !== undefined
-    const storagePath = isSlide
-      ? `${user.id}/${postId}-slide${slideIndex}.${ext}`
-      : `${user.id}/${postId}.${ext}`
+    const isScene = sceneIndex !== undefined
+    const storagePath = isScene
+      ? `${user.id}/${postId}-scene${sceneIndex}.${ext}`
+      : isSlide
+        ? `${user.id}/${postId}-slide${slideIndex}.${ext}`
+        : `${user.id}/${postId}.${ext}`
 
     // Convert base64 to buffer
     const buffer = Buffer.from(data, 'base64')
@@ -86,7 +90,15 @@ export async function POST(request: Request) {
     const publicUrl = urlData.publicUrl
 
     let updateError
-    if (isSlide) {
+    if (isScene) {
+      // Merge scene video URL into slide_image_urls JSONB with "sceneN" keys
+      const current = (post.slide_image_urls as Record<string, string> | null) ?? {}
+      const updated = { ...current, [`scene${sceneIndex}`]: publicUrl }
+      ;({ error: updateError } = await supabase
+        .from('schedule_posts')
+        .update({ slide_image_urls: updated })
+        .eq('id', postId))
+    } else if (isSlide) {
       // Merge slide URL into slide_image_urls JSONB
       const current = (post.slide_image_urls as Record<string, string> | null) ?? {}
       const updated = { ...current, [slideIndex.toString()]: publicUrl }

@@ -54,8 +54,8 @@ export function getStatusLabel(status: string): string {
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
     draft: 'bg-muted text-muted-foreground',
-    planned: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    published: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    planned: 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary',
+    published: 'bg-chart-2/10 text-chart-2 dark:bg-chart-2/20 dark:text-chart-2',
   }
   return colors[status] ?? ''
 }

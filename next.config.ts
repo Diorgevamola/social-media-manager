@@ -2,6 +2,7 @@ import type { NextConfig } from 'next'
 import path from 'path'
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['pdf-parse', '@ffmpeg-installer/ffmpeg', 'fluent-ffmpeg'],
   webpack: (config) => {
     // Força a versão UMD de @floating-ui/react-dom para evitar o erro
     // "ReactDOM.flushSync is not a function" com React 19 + Next.js 15.

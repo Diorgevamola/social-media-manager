@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { publishPost, tryPublishReelContainer } from '@/lib/instagram/publishing'
+import { decryptToken } from '@/lib/token-crypto'
 import type { SchedulePostRow, InstagramAccount } from '@/types/database'
 
 export const maxDuration = 60 // Vercel Hobby: máximo 60s
@@ -48,7 +49,8 @@ export async function GET(request: Request) {
     if (!account?.ig_user_id || !account.access_token) continue
 
     try {
-      const igMediaId = await tryPublishReelContainer(account.ig_user_id, account.access_token, row.ig_container_id!)
+      const plainToken = decryptToken(account.access_token)
+      const igMediaId = await tryPublishReelContainer(account.ig_user_id, plainToken, row.ig_container_id!)
       if (igMediaId) {
         await supabase
           .from('schedule_posts')
@@ -104,13 +106,18 @@ export async function GET(request: Request) {
     const account = accountMap.get(accountId)
     if (!account) continue
 
+    const decryptedAccount = {
+      ...account,
+      access_token: decryptToken(account.access_token),
+    }
+
     await supabase
       .from('schedule_posts')
       .update({ publish_attempts: (post.publish_attempts ?? 0) + 1 })
       .eq('id', post.id)
 
     try {
-      const result = await publishPost(post, account)
+      const result = await publishPost(post, decryptedAccount)
 
       if (result.status === 'pending_reel') {
         await supabase

@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import { logAiUsage } from '@/lib/log-ai-usage'
 import { z } from 'zod'
 import { addDays, format, getDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { ScheduleDay } from '@/types/schedule'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
 
 const DAY_NAMES = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
 
@@ -107,6 +106,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nenhum dia configurado com posts' }, { status: 400 })
     }
 
+    // Carregar base de conhecimento se habilitada
+    const kbEnabled = (account as unknown as { knowledge_base_enabled?: boolean }).knowledge_base_enabled !== false
+    const kbInfluence = (account as unknown as { knowledge_base_influence?: number }).knowledge_base_influence ?? 50
+    let knowledgeBaseSection = ''
+
+    if (kbEnabled) {
+      const charsPerDoc = kbInfluence === 30 ? 800 : kbInfluence === 40 ? 1600 : kbInfluence === 50 ? 3000 : 8000
+      const { data: kbDocs } = await supabase
+        .from('account_knowledge_docs')
+        .select('file_name, extracted_text')
+        .eq('account_id', accountId)
+        .eq('user_id', user.id)
+        .not('extracted_text', 'is', null)
+        .order('created_at', { ascending: true })
+
+      if (kbDocs && kbDocs.length > 0) {
+        const influenceLabel =
+          kbInfluence === 30 ? 'Use como inspiração leve — informe sutilmente o tom e a direção, sem dominar as ideias.' :
+          kbInfluence === 40 ? 'Use como referência moderada — incorpore insights desta base em aproximadamente 40% do conteúdo.' :
+          kbInfluence === 50 ? 'Use de forma equilibrada — metade do conteúdo deve ser diretamente inspirado por estes documentos.' :
+          'Prioridade total — TODO o conteúdo deve ser profundamente alinhado com os temas, linguagem e diretrizes destes documentos.'
+
+        const docsText = kbDocs
+          .map(doc => `### ${doc.file_name}\n${(doc.extracted_text ?? '').slice(0, charsPerDoc)}`)
+          .join('\n\n---\n\n')
+
+        knowledgeBaseSection = `
+BASE DE CONHECIMENTO DA MARCA (${kbInfluence}% de influência):
+${influenceLabel}
+
+${docsText}
+
+---`
+      }
+    }
+
     const pillars = account.content_pillars?.join(', ') || 'geral'
     const postsSchedule = days.map(d => ({
       date: format(d.date, 'yyyy-MM-dd'),
@@ -130,7 +165,7 @@ PERFIL:
 - Notas estratégicas: ${account.strategic_notes || 'nenhuma'}
 - Paleta de cores da marca: ${hasPalette ? colorPaletteStr.join(', ') + ' — USE ESTAS CORES como base dos color_palette nos briefings visuais' : 'não definida (use cores que combinem com o nicho e tom de voz)'}
 ${negativeWords.length > 0 ? `- PALAVRAS PROIBIDAS (NUNCA use estas palavras em nenhum conteúdo gerado): ${negativeWords.join(', ')}` : ''}
-
+${knowledgeBaseSection}
 PERÍODO: ${periodDays} dias a partir de hoje (${format(startDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })})
 
 CRONOGRAMA DE POSTS A PLANEJAR:
@@ -354,7 +389,11 @@ Retorne APENAS um JSON válido com esta estrutura exata (contém exemplos dos 5 
         try {
           send({ type: 'start', totalDays: days.length })
 
-          const geminiStream = await model.generateContentStream(prompt)
+          const geminiStream = await ai.models.generateContentStream({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { thinkingConfig: { thinkingBudget: 0 } },
+          })
           let usageMeta: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined
 
           let buffer = ''
@@ -362,10 +401,10 @@ Retorne APENAS um JSON válido com esta estrutura exata (contém exemplos dos 5 
           let foundScheduleArray = false
           let completedCount = 0
 
-          for await (const chunk of geminiStream.stream) {
+          for await (const chunk of geminiStream) {
             const meta = chunk.usageMetadata
-            if (meta) usageMeta = meta
-            buffer += chunk.text()
+            if (meta) usageMeta = meta as typeof usageMeta
+            buffer += chunk.text ?? ''
 
             // Detect the start of the "schedule" array
             if (!foundScheduleArray) {

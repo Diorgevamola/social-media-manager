@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { publishPost } from '@/lib/instagram/publishing'
+import { decryptToken } from '@/lib/token-crypto'
 import type { SchedulePostRow, InstagramAccount } from '@/types/database'
 
 export async function POST(
@@ -65,6 +66,11 @@ export async function POST(
     return NextResponse.json({ error: 'Conta não conectada ao Meta. Conecte em /dashboard/accounts.' }, { status: 422 })
   }
 
+  const decryptedAccount = {
+    ...accountRow,
+    access_token: decryptToken(accountRow.access_token),
+  }
+
   // Incrementa tentativas antes de publicar
   await supabase
     .from('schedule_posts')
@@ -72,7 +78,7 @@ export async function POST(
     .eq('id', postId)
 
   try {
-    const result = await publishPost(postRow, accountRow)
+    const result = await publishPost(postRow, decryptedAccount)
 
     if (result.status === 'pending_reel') {
       await supabase

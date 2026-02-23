@@ -258,6 +258,10 @@ export function ScheduleCalendar({ schedule, onRegenerate, regenerating: _regene
             onClose={() => setSelected(null)}
             scheduleId={scheduleId}
             mediaEntry={mediaMap[`${selected.day.date}::${selected.post.theme}`] ?? null}
+            persistedSceneUrls={Array.from(
+              { length: selected.post.script?.scenes?.length ?? 0 },
+              (_, i) => mediaMap[`${selected.day.date}::${selected.post.theme}::scene${i}`]?.videoUrl ?? null
+            )}
             onMediaSaved={onMediaSaved}
             onMediaGenerated={handleSessionMediaAdded}
             onDeleted={() => {
@@ -361,7 +365,7 @@ function PostGallerySection({
   const [publishing, setPublishing] = useState<Set<string>>(new Set())
   const [publishedKeys, setPublishedKeys] = useState<Set<string>>(new Set())
   const [publishErrors, setPublishErrors] = useState<Record<string, string>>({})
-  const [calendarReelDuration, setCalendarReelDuration] = useState<8 | 15 | 22 | 30>(8)
+  const [calendarReelDuration, setCalendarReelDuration] = useState<4 | 6 | 8>(8)
   const [showDurationPicker, setShowDurationPicker] = useState<string | null>(null)
 
   const allPosts = schedule.schedule.flatMap(day => day.posts.map(post => ({ day, post })))
@@ -420,6 +424,7 @@ function PostGallerySection({
     base64: string,
     mimeType: 'image/png' | 'image/jpeg' | 'video/mp4',
     slideIndex?: number,
+    sceneIndex?: number,
   ) {
     // Lê do ref para garantir o valor mais recente mesmo em closures assíncronos
     const currentScheduleId = scheduleIdRef.current
@@ -443,6 +448,7 @@ function PostGallerySection({
         mimeType,
       }
       if (slideIndex !== undefined) body.slideIndex = slideIndex
+      if (sceneIndex !== undefined) body.sceneIndex = sceneIndex
       const uploadRes = await fetch('/api/media/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -450,11 +456,13 @@ function PostGallerySection({
       })
       if (uploadRes.ok) {
         const { url } = await uploadRes.json() as { url: string }
-        const slideKey = slideIndex !== undefined ? `${key}::slide${slideIndex}` : key
-        onMediaSaved?.(slideKey, mimeType !== 'video/mp4' ? url : null, mimeType === 'video/mp4' ? url : null)
-        // Slide 0 also updates the main key for thumbnail
-        if (slideIndex === 0) {
-          onMediaSaved?.(key, url, null)
+        if (sceneIndex !== undefined) {
+          onMediaSaved?.(`${key}::scene${sceneIndex}`, null, url)
+          if (sceneIndex === 0) onMediaSaved?.(key, null, url)
+        } else {
+          const slideKey = slideIndex !== undefined ? `${key}::slide${slideIndex}` : key
+          onMediaSaved?.(slideKey, mimeType !== 'video/mp4' ? url : null, mimeType === 'video/mp4' ? url : null)
+          if (slideIndex === 0) onMediaSaved?.(key, url, null)
         }
       }
     } catch (err) {
@@ -470,38 +478,85 @@ function PostGallerySection({
 
     try {
       if (type === 'reel') {
-        setVideoProgress(prev => ({ ...prev, [key]: 'Iniciando geração do vídeo...' }))
-        const res = await fetch('/api/media/generate-video', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: calendarReelDuration }),
-        })
-        if (!res.ok || !res.body) throw new Error('Falha ao conectar')
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let buf = ''
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += decoder.decode(value, { stream: true })
-          const parts = buf.split('\n\n')
-          buf = parts.pop() ?? ''
-          for (const part of parts) {
-            const line = part.replace(/^data: /, '').trim()
-            if (!line) continue
+        const sceneCnt = post.script?.scenes?.length ?? 0
+        if (sceneCnt > 0) {
+          // Scene-based: one Veo clip per scene
+          for (let sceneIdx = 0; sceneIdx < sceneCnt; sceneIdx++) {
+            const scene = post.script!.scenes[sceneIdx]
+            const dur = toVeoDuration(parseSceneDurationSeconds(scene.time))
+            setVideoProgress(prev => ({ ...prev, [key]: `Gerando cena ${sceneIdx + 1}/${sceneCnt}...` }))
             try {
-              const evt = JSON.parse(line) as { type: string; message?: string; videoData?: string; mimeType?: string }
-              if (evt.type === 'start' || evt.type === 'progress') {
-                setVideoProgress(prev => ({ ...prev, [key]: evt.message ?? '' }))
-              } else if (evt.type === 'complete' && evt.videoData) {
-                onSessionMediaAdded(key, evt.videoData!, 'video/mp4')
-                setVideoProgress(prev => { const n = { ...prev }; delete n[key]; return n })
-                uploadForPost(day, post, evt.videoData, 'video/mp4')
-              } else if (evt.type === 'error') {
-                throw new Error(evt.message ?? 'Erro ao gerar vídeo')
+              const res = await fetch('/api/media/generate-video', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: buildSceneVideoPrompt(post, sceneIdx), targetDuration: dur }),
+              })
+              if (!res.ok || !res.body) continue
+              const reader = res.body.getReader()
+              const decoder = new TextDecoder()
+              let buf = ''
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                buf += decoder.decode(value, { stream: true })
+                const parts = buf.split('\n\n')
+                buf = parts.pop() ?? ''
+                for (const part of parts) {
+                  const line = part.replace(/^data: /, '').trim()
+                  if (!line) continue
+                  let evt: { type: string; message?: string; videoData?: string; mimeType?: string }
+                  try { evt = JSON.parse(line) } catch { continue }
+                  if (evt.type === 'start' || evt.type === 'progress') {
+                    setVideoProgress(prev => ({ ...prev, [key]: `Cena ${sceneIdx + 1}/${sceneCnt}: ${evt.message ?? ''}` }))
+                  } else if (evt.type === 'complete' && evt.videoData) {
+                    onSessionMediaAdded(`${key}::scene${sceneIdx}`, evt.videoData, 'video/mp4')
+                    if (sceneIdx === 0) onSessionMediaAdded(key, evt.videoData, 'video/mp4')
+                    uploadForPost(day, post, evt.videoData, 'video/mp4', undefined, sceneIdx)
+                  } else if (evt.type === 'error') {
+                    throw new Error(evt.message ?? 'Erro')
+                  }
+                }
               }
-            } catch {
-              // ignore parse errors on partial chunks
+            } catch (sceneErr) {
+              console.error(`[generateForPost] cena ${sceneIdx} falhou:`, sceneErr)
+            }
+          }
+          setVideoProgress(prev => { const n = { ...prev }; delete n[key]; return n })
+        } else {
+          // Fallback: single video for the whole reel
+          setVideoProgress(prev => ({ ...prev, [key]: 'Iniciando geração do vídeo...' }))
+          const res = await fetch('/api/media/generate-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: calendarReelDuration }),
+          })
+          if (!res.ok || !res.body) throw new Error('Falha ao conectar')
+          const reader = res.body.getReader()
+          const decoder = new TextDecoder()
+          let buf = ''
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buf += decoder.decode(value, { stream: true })
+            const parts = buf.split('\n\n')
+            buf = parts.pop() ?? ''
+            for (const part of parts) {
+              const line = part.replace(/^data: /, '').trim()
+              if (!line) continue
+              try {
+                const evt = JSON.parse(line) as { type: string; message?: string; videoData?: string; mimeType?: string }
+                if (evt.type === 'start' || evt.type === 'progress') {
+                  setVideoProgress(prev => ({ ...prev, [key]: evt.message ?? '' }))
+                } else if (evt.type === 'complete' && evt.videoData) {
+                  onSessionMediaAdded(key, evt.videoData!, 'video/mp4')
+                  setVideoProgress(prev => { const n = { ...prev }; delete n[key]; return n })
+                  uploadForPost(day, post, evt.videoData, 'video/mp4')
+                } else if (evt.type === 'error') {
+                  throw new Error(evt.message ?? 'Erro ao gerar vídeo')
+                }
+              } catch {
+                // ignore parse errors on partial chunks
+              }
             }
           }
         }
@@ -864,6 +919,10 @@ function PostGallerySection({
             { length: expandedPost.post.visual?.slides?.length ?? 0 },
             (_, i) => mediaMap[`${expandedPost.day.date}::${expandedPost.post.theme}::slide${i}`]?.imageUrl ?? null
           )}
+          persistedSceneUrls={Array.from(
+            { length: expandedPost.post.script?.scenes?.length ?? 0 },
+            (_, i) => mediaMap[`${expandedPost.day.date}::${expandedPost.post.theme}::scene${i}`]?.videoUrl ?? null
+          )}
           onMediaSaved={onMediaSaved}
           scheduleId={scheduleId}
           isApproved={approved.has(`${expandedPost.day.date}::${expandedPost.post.theme}`)}
@@ -1054,7 +1113,7 @@ function PostGallerySection({
                 {/* Regenerate */}
                 {post.type === 'reel' && showDurationPicker === key ? (
                   <div className="flex items-center gap-1">
-                    {([8, 15, 22, 30] as const).map(d => (
+                    {([4, 6, 8] as const).map(d => (
                       <button
                         key={d}
                         onClick={() => {
@@ -1138,6 +1197,7 @@ function PostExpandedModal({
   onSessionMediaAdded,
   mediaEntry,
   persistedSlideUrls,
+  persistedSceneUrls,
   onMediaSaved,
   scheduleId,
   isApproved,
@@ -1152,6 +1212,7 @@ function PostExpandedModal({
   onSessionMediaAdded: (key: string, src: string, mimeType: string) => void
   mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string } | null
   persistedSlideUrls?: (string | null)[]
+  persistedSceneUrls?: (string | null)[]
   onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
   scheduleId?: string | null
   isApproved: boolean
@@ -1165,13 +1226,18 @@ function PostExpandedModal({
   const isStorySeq = type === 'story_sequence'
   const isMultiFrameModal = isCarousel || isStorySeq
   const carouselSlideCount = post.visual?.slides?.length ?? 0
+  const sceneCount = type === 'reel' ? (post.script?.scenes?.length ?? 0) : 0
 
   const [activeSlide, setActiveSlide] = useState(0)
+  const [activeScene, setActiveScene] = useState(0)
   const [generating, setGenerating] = useState(false)
   const [generatingSlide, setGeneratingSlide] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
-  const [modalReelDuration, setModalReelDuration] = useState<8 | 15 | 22 | 30>(30)
+  const [modalReelDuration, setModalReelDuration] = useState<4 | 6 | 8>(8)
+  const [sceneVideoGenerating, setSceneVideoGenerating] = useState<boolean[]>(() => Array(sceneCount).fill(false))
+  const [sceneVideoProgress, setSceneVideoProgress] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))
+  const [generatingAllScenes, setGeneratingAllScenes] = useState(false)
 
   const scheduleIdRef = useRef(scheduleId)
   scheduleIdRef.current = scheduleId
@@ -1242,6 +1308,102 @@ function PostExpandedModal({
     setGenerating(false)
   }
 
+  // Resolve vídeo de uma cena (session ou persistido)
+  function getSceneVideo(idx: number): string | null {
+    const sceneKey = `${mediaKey}::scene${idx}`
+    const entry = sessionMedia[sceneKey]
+    if (entry) return `data:${entry.mimeType};base64,${entry.src}`
+    const persisted = persistedSceneUrls?.[idx]
+    if (persisted) return persisted
+    return null
+  }
+
+  // Upload silencioso de vídeo de cena
+  async function uploadSceneVideo(base64: string, sceneIdx: number) {
+    const currentScheduleId = scheduleIdRef.current
+    if (!currentScheduleId) return
+    try {
+      let postId = mediaEntry?.postId
+      if (!postId) {
+        const res = await fetch(
+          `/api/schedule/post-id?scheduleId=${encodeURIComponent(currentScheduleId)}&date=${encodeURIComponent(day.date)}&theme=${encodeURIComponent(post.theme)}`
+        )
+        if (!res.ok) return
+        const data = await res.json() as { postId: string }
+        postId = data.postId
+      }
+      if (!postId) return
+      const uploadRes = await fetch('/api/media/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, mediaType: 'video', data: base64, mimeType: 'video/mp4', sceneIndex: sceneIdx }),
+      })
+      if (uploadRes.ok) {
+        const { url } = await uploadRes.json() as { url: string }
+        onMediaSaved?.(`${mediaKey}::scene${sceneIdx}`, null, url)
+        if (sceneIdx === 0) onMediaSaved?.(mediaKey, null, url)
+      }
+    } catch { /* silencioso */ }
+  }
+
+  // Gera vídeo de uma cena específica
+  async function generateScene(sceneIdx: number) {
+    setSceneVideoGenerating(prev => prev.map((v, i) => i === sceneIdx ? true : v))
+    setSceneVideoProgress(prev => prev.map((v, i) => i === sceneIdx ? 'Iniciando...' : v))
+    setError(null)
+    try {
+      const scene = post.script!.scenes[sceneIdx]
+      const dur = toVeoDuration(parseSceneDurationSeconds(scene.time))
+      const res = await fetch('/api/media/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: buildSceneVideoPrompt(post, sceneIdx), targetDuration: dur }),
+      })
+      if (!res.ok || !res.body) throw new Error('Falha ao conectar')
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const parts = buf.split('\n\n')
+        buf = parts.pop() ?? ''
+        for (const part of parts) {
+          const line = part.replace(/^data: /, '').trim()
+          if (!line) continue
+          let evt: { type: string; message?: string; videoData?: string }
+          try { evt = JSON.parse(line) } catch { continue }
+          if (evt.type === 'start' || evt.type === 'progress') {
+            setSceneVideoProgress(prev => prev.map((v, i) => i === sceneIdx ? (evt.message ?? '') : v))
+          } else if (evt.type === 'complete' && evt.videoData) {
+            onSessionMediaAdded(`${mediaKey}::scene${sceneIdx}`, evt.videoData, 'video/mp4')
+            if (sceneIdx === 0) onSessionMediaAdded(mediaKey, evt.videoData, 'video/mp4')
+            setSceneVideoProgress(prev => prev.map((v, i) => i === sceneIdx ? null : v))
+            uploadSceneVideo(evt.videoData, sceneIdx)
+          } else if (evt.type === 'error') {
+            throw new Error(evt.message ?? 'Erro')
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao gerar cena')
+      setSceneVideoProgress(prev => prev.map((v, i) => i === sceneIdx ? null : v))
+    } finally {
+      setSceneVideoGenerating(prev => prev.map((v, i) => i === sceneIdx ? false : v))
+    }
+  }
+
+  // Gera todas as cenas sequencialmente
+  async function generateAllScenes() {
+    setGeneratingAllScenes(true)
+    setError(null)
+    for (let i = 0; i < sceneCount; i++) {
+      await generateScene(i)
+    }
+    setGeneratingAllScenes(false)
+  }
+
   // Gera mídia principal (post / story / reel)
   async function generateMain() {
     setGenerating(true)
@@ -1267,18 +1429,17 @@ function PostExpandedModal({
           for (const part of parts) {
             const line = part.replace(/^data: /, '').trim()
             if (!line) continue
-            try {
-              const evt = JSON.parse(line) as { type: string; message?: string; videoData?: string }
-              if (evt.type === 'start' || evt.type === 'progress') {
-                setVideoProgress(evt.message ?? '')
-              } else if (evt.type === 'complete' && evt.videoData) {
-                onSessionMediaAdded(mediaKey, evt.videoData, 'video/mp4')
-                setVideoProgress(null)
-                uploadMedia(evt.videoData, 'video/mp4')
-              } else if (evt.type === 'error') {
-                throw new Error(evt.message ?? 'Erro ao gerar vídeo')
-              }
-            } catch { /* ignore parse errors */ }
+            let evt: { type: string; message?: string; videoData?: string }
+            try { evt = JSON.parse(line) } catch { continue }
+            if (evt.type === 'start' || evt.type === 'progress') {
+              setVideoProgress(evt.message ?? '')
+            } else if (evt.type === 'complete' && evt.videoData) {
+              onSessionMediaAdded(mediaKey, evt.videoData, 'video/mp4')
+              setVideoProgress(null)
+              uploadMedia(evt.videoData, 'video/mp4')
+            } else if (evt.type === 'error') {
+              throw new Error(evt.message ?? 'Erro ao gerar vídeo')
+            }
           }
         }
       } else {
@@ -1303,7 +1464,9 @@ function PostExpandedModal({
   }
 
   // Auto-gera vídeo de reel ao abrir modal se ainda não há vídeo
+  // (desabilitado para reels com cenas — usuário gera cada cena manualmente)
   useEffect(() => {
+    if (type === 'reel' && sceneCount > 0) return
     const hasVideo = !!(sessionMedia[mediaKey]) || !!mediaEntry?.videoUrl
     if (type === 'reel' && !hasVideo) {
       generateMain()
@@ -1370,10 +1533,12 @@ function PostExpandedModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
+      onWheel={e => e.stopPropagation()}
     >
       <div
         className={`bg-background rounded-2xl border shadow-2xl w-full max-h-[92vh] flex flex-col overflow-hidden ${isMultiFrameModal ? 'max-w-5xl' : 'max-w-4xl'}`}
         onClick={e => e.stopPropagation()}
+        onWheel={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b shrink-0">
@@ -1396,10 +1561,10 @@ function PostExpandedModal({
 
         {/* Body */}
         <div className="flex-1 overflow-hidden min-h-0">
-          <div className="grid lg:grid-cols-[1fr_320px] h-full">
+          <div className="grid lg:grid-cols-[1fr_320px] h-full min-h-0">
 
             {/* Left: Mídia */}
-            <div className={`flex flex-col gap-3 p-5 border-r ${isMultiFrameModal ? 'overflow-hidden h-full' : 'overflow-y-auto'}`}>
+            <div className="flex flex-col gap-3 p-5 border-r overflow-y-auto">
               <div>
                 <h3 className="font-semibold text-base leading-snug">{post.theme}</h3>
                 {post.content_pillar && (
@@ -1409,9 +1574,9 @@ function PostExpandedModal({
 
               {/* Carrossel / Sequência de Stories — visualizador de frames */}
               {isMultiFrameModal && carouselSlideCount > 0 ? (
-                <div className="flex flex-col gap-3 flex-1 min-h-0">
+                <div className="flex flex-col gap-3">
                   {/* Viewer principal do slide ativo */}
-                  <div className="relative bg-muted/30 rounded-xl overflow-hidden flex-1 min-h-0" style={{ minHeight: '320px' }}>
+                  <div className="relative bg-muted/30 rounded-xl overflow-hidden" style={{ height: 'min(45vh, 420px)' }}>
                     {generatingSlide === activeSlide ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                         <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -1547,14 +1712,180 @@ function PostExpandedModal({
                     </Button>
                   </div>
                 </div>
+              ) : type === 'reel' && sceneCount > 0 ? (
+                /* Reel com cenas: viewer por cena */
+                <div className="flex flex-col gap-3">
+                  {/* Player principal da cena ativa */}
+                  <div className="relative bg-muted/30 rounded-xl overflow-hidden" style={{ height: 'min(45vh, 420px)' }}>
+                    {sceneVideoGenerating[activeScene] ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground px-4 text-center">
+                          {sceneVideoProgress[activeScene] ?? `Gerando cena ${activeScene + 1}...`}
+                        </p>
+                      </div>
+                    ) : getSceneVideo(activeScene) ? (
+                      <video
+                        key={activeScene}
+                        src={getSceneVideo(activeScene)!}
+                        controls
+                        className="absolute inset-0 w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground/40 p-6 text-center">
+                        <Clapperboard className="size-12" />
+                        <p className="text-[11px] text-muted-foreground/70 leading-snug max-w-[240px]">
+                          {post.script?.scenes?.[activeScene]?.visual ?? 'Cena não gerada'}
+                        </p>
+                      </div>
+                    )}
+                    {sceneCount > 1 && (
+                      <>
+                        <button
+                          onClick={() => setActiveScene(s => Math.max(0, s - 1))}
+                          disabled={activeScene === 0}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 size-9 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
+                        >
+                          <ChevronLeft className="size-5" />
+                        </button>
+                        <button
+                          onClick={() => setActiveScene(s => Math.min(sceneCount - 1, s + 1))}
+                          disabled={activeScene === sceneCount - 1}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 size-9 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
+                        >
+                          <ChevronRight className="size-5" />
+                        </button>
+                      </>
+                    )}
+                    <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                      Cena {activeScene + 1}/{sceneCount}
+                    </div>
+                    {post.script?.scenes?.[activeScene]?.time && (
+                      <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full">
+                        {post.script.scenes[activeScene].time}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info da cena ativa */}
+                  {post.script?.scenes?.[activeScene] && (
+                    <div className="bg-muted/30 rounded-lg p-3 shrink-0 space-y-1.5">
+                      <div>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Visual</p>
+                        <p className="text-xs">{post.script.scenes[activeScene].visual}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Narração</p>
+                        <p className="text-xs text-muted-foreground">{post.script.scenes[activeScene].narration}</p>
+                      </div>
+                      {post.script.scenes[activeScene].text_overlay && (
+                        <div className="bg-black/80 text-white rounded px-2 py-1 inline-block">
+                          <p className="text-[9px] font-bold">{post.script.scenes[activeScene].text_overlay}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Faixa de thumbnails das cenas */}
+                  <div className="shrink-0">
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-wide mb-1.5">Todas as cenas</p>
+                    <div className="overflow-x-auto pb-1">
+                      <div className="flex gap-2">
+                        {Array.from({ length: sceneCount }).map((_, i) => {
+                          const vid = getSceneVideo(i)
+                          const isActive = i === activeScene
+                          const isGen = sceneVideoGenerating[i]
+                          const scene = post.script?.scenes?.[i]
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => setActiveScene(i)}
+                              className={`relative shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                                isActive
+                                  ? 'border-primary ring-2 ring-primary/30'
+                                  : vid
+                                    ? 'border-border hover:border-primary/60'
+                                    : 'border-dashed border-muted-foreground/30 hover:border-primary/40'
+                              }`}
+                              style={{ width: '48px', aspectRatio: '9/16' }}
+                              title={`Cena ${i + 1}${scene ? ` — ${scene.time}` : ''}`}
+                            >
+                              {isGen ? (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                                  <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                                </div>
+                              ) : vid ? (
+                                <video src={vid} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+                              ) : (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 gap-0.5 p-1">
+                                  <Clapperboard className="size-3 text-muted-foreground/50" />
+                                  <span className="text-[7px] text-muted-foreground/50 leading-tight text-center">{scene?.time ?? i + 1}</span>
+                                </div>
+                              )}
+                              <div className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[8px] px-1 rounded leading-tight">
+                                {i + 1}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex gap-2 shrink-0">
+                    {getSceneVideo(activeScene) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-8 shrink-0"
+                        onClick={() => {
+                          const vid = getSceneVideo(activeScene)!
+                          const slug = post.theme.slice(0, 40).replace(/\s+/g, '-')
+                          const a = document.createElement('a')
+                          a.href = vid
+                          a.download = `${slug}-cena-${activeScene + 1}.mp4`
+                          a.click()
+                        }}
+                      >
+                        <Download className="size-3.5" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant={getSceneVideo(activeScene) ? 'outline' : 'default'}
+                      className="flex-1 gap-1.5 h-8"
+                      disabled={sceneVideoGenerating[activeScene] || generatingAllScenes}
+                      onClick={() => generateScene(activeScene)}
+                    >
+                      {sceneVideoGenerating[activeScene]
+                        ? <><Loader2 className="size-3.5 animate-spin" />Gerando cena {activeScene + 1}...</>
+                        : <><Sparkles className="size-3.5" />{getSceneVideo(activeScene) ? 'Regerar cena' : 'Gerar esta cena'}</>
+                      }
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 h-8 shrink-0"
+                      disabled={sceneVideoGenerating.some(Boolean) || generatingAllScenes}
+                      onClick={generateAllScenes}
+                      title="Gerar todas as cenas"
+                    >
+                      {generatingAllScenes
+                        ? <><Loader2 className="size-3.5 animate-spin" />Gerando...</>
+                        : <><Sparkles className="size-3.5" />Gerar todas</>
+                      }
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 /* Não-carrossel: imagem/vídeo */
                 <div className="space-y-3">
                   <div className={`relative bg-muted/30 rounded-xl overflow-hidden ${
-                    type === 'story' ? 'aspect-[9/16] max-h-[55vh]' :
-                    type === 'reel' ? 'aspect-video' : 'aspect-square max-h-[55vh]'
+                    type === 'story' ? 'aspect-[9/16] max-h-[55vh]' : 'aspect-square max-h-[55vh]'
                   }`}>
-                    {generating && !mainIsVideo ? (
+                    {generating ? (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -1581,28 +1912,6 @@ function PostExpandedModal({
                     </div>
                   )}
 
-                  {type === 'reel' && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground shrink-0">Duração:</span>
-                      <div className="flex gap-1">
-                        {([8, 15, 22, 30] as const).map(d => (
-                          <button
-                            key={d}
-                            onClick={() => setModalReelDuration(d)}
-                            disabled={generating}
-                            className={`text-xs px-2 py-1 rounded border transition-colors ${
-                              modalReelDuration === d
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'border-input hover:border-primary/60 text-muted-foreground'
-                            }`}
-                          >
-                            {d}s
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   <div className="flex gap-2">
                     {mainSrc && (
                       <Button size="sm" variant="outline" className="gap-1.5 h-8 shrink-0" onClick={handleDownloadMain}>
@@ -1618,8 +1927,8 @@ function PostExpandedModal({
                       onClick={generateMain}
                     >
                       {generating
-                        ? <><Loader2 className="size-3.5 animate-spin" />{type === 'reel' ? 'Gerando vídeo...' : 'Gerando...'}</>
-                        : <><Sparkles className="size-3.5" />{mainSrc ? 'Gerar novamente' : type === 'reel' ? 'Gerar vídeo' : 'Gerar imagem'}</>
+                        ? <><Loader2 className="size-3.5 animate-spin" />Gerando...</>
+                        : <><Sparkles className="size-3.5" />{mainSrc ? 'Gerar novamente' : 'Gerar imagem'}</>
                       }
                     </Button>
                   </div>
@@ -1760,13 +2069,13 @@ function buildCarouselSlidePrompt(post: SchedulePost, slideIdx: number): string 
   if (!slide || !v) return buildImagePrompt(post)
   return [
     `${slide.image_description}.`,
+    `Visual concept for this slide (do NOT write this as text): ${slide.description}.`,
     `Instagram carousel slide ${slide.slide_number}.`,
-    `Headline text on the slide: "${slide.headline}".`,
-    `Body text on the slide: "${slide.description}".`,
+    `The ONLY text visible on the image should be this headline: "${slide.headline}".`,
     `Apply these brand colors as fills, backgrounds and accents: ${v.color_palette.join(', ')}. NEVER write these hex codes as visible text on the image.`,
     `Background: ${v.background}.`,
     `Style: professional social media carousel slide for Instagram, 4:5 ratio.`,
-    `IMPORTANT: Do not display hex color codes, color swatches, or any technical metadata as text anywhere on the image.`,
+    `IMPORTANT: Do not render the visual concept description as visible text. Do not display hex color codes or any technical metadata as text on the image.`,
   ].filter(Boolean).join(' ')
 }
 
@@ -1776,13 +2085,13 @@ function buildStorySequenceFramePrompt(post: SchedulePost, frameIdx: number): st
   if (!frame || !v) return buildImagePrompt(post)
   return [
     `${frame.image_description}.`,
+    `Visual concept for this frame (do NOT write this as text): ${frame.description}.`,
     `Instagram story frame ${frame.slide_number}, vertical 9:16 format.`,
-    `Headline text on the frame: "${frame.headline}".`,
-    `Body text on the frame: "${frame.description}".`,
+    `The ONLY text visible on the image should be this headline: "${frame.headline}".`,
     `Apply these brand colors as fills, backgrounds and accents: ${v.color_palette.join(', ')}. NEVER write these hex codes as visible text on the image.`,
     `Background: ${v.background}.`,
     `Style: professional Instagram story, vertical 9:16 aspect ratio, full bleed design.`,
-    `IMPORTANT: Do not display hex color codes, color swatches, or any technical metadata as text anywhere on the image.`,
+    `IMPORTANT: Do not render the visual concept description as visible text. Do not display hex color codes or any technical metadata as text on the image.`,
   ].filter(Boolean).join(' ')
 }
 
@@ -1790,20 +2099,88 @@ function buildVideoPrompt(post: SchedulePost): string {
   const s = post.script
   if (!s) return `${post.theme}. ${post.caption ?? ''}`
   return [
-    `Instagram Reel video, ${s.duration}.`,
-    `Hook: "${s.hook}".`,
-    s.scenes.map((sc, i) => `Scene ${i + 1} (${sc.time}): ${sc.visual}. ${sc.narration}`).join(' '),
-    `Call to action: ${s.cta}.`,
+    `Cinematic Instagram Reel in Brazilian Portuguese (pt-BR), 9:16 vertical, ${s.duration}.`,
+    `ALL spoken dialogue and narration MUST be in Brazilian Portuguese with a natural Brazilian accent — NOT European Portuguese.`,
     `Theme: ${post.theme}.`,
-  ].join(' ')
+    `Background: dramatic cinematic soundtrack with ambient sound effects matching the mood.`,
+    `A confident Brazilian male voice narrates the opening hook: "${s.hook}"`,
+    s.scenes.map((sc, i) => [
+      `Scene ${i + 1} (${sc.time}):`,
+      sc.visual,
+      sc.narration ? `The narrator says in Brazilian Portuguese: "${sc.narration}"` : null,
+    ].filter(Boolean).join(' ')).join(' '),
+    s.cta ? `The narrator ends with the call to action: "${s.cta}"` : null,
+    `Style: professional, high-production cinematic vertical video with smooth transitions and dramatic lighting.`,
+    `IMPORTANT: Do NOT render any text, subtitles, captions, or written words on screen. The video must be purely visual with spoken audio only.`,
+  ].filter(Boolean).join(' ')
 }
 
-function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSaved, onDeleted, onMediaGenerated }: {
+// ── Scene video helpers ─────────────────────────────────────────────────────
+
+function parseSceneDurationSeconds(time: string): number {
+  const m = time.match(/(\d+)[^\d]+(\d+)/)
+  if (!m) return 8
+  return Math.max(1, parseInt(m[2]) - parseInt(m[1]))
+}
+
+function toVeoDuration(secs: number): 4 | 6 | 8 {
+  if (secs <= 5) return 4
+  if (secs <= 7) return 6
+  return 8
+}
+
+function buildSceneVideoPrompt(post: SchedulePost, sceneIdx: number): string {
+  const s = post.script
+  if (!s) return `${post.theme}. Scene ${sceneIdx + 1}.`
+  const scene = s.scenes[sceneIdx]
+  if (!scene) return `${post.theme}.`
+
+  const totalScenes = s.scenes.length
+  const isFirst = sceneIdx === 0
+  const isLast = sceneIdx === totalScenes - 1
+
+  return [
+    // Global language context — must come first
+    `Cinematic Instagram Reel clip in Brazilian Portuguese (pt-BR), 9:16 vertical format.`,
+    `ALL spoken audio MUST use Brazilian Portuguese with a natural Brazilian accent — NOT European Portuguese (pt-PT).`,
+
+    // Theme and visual description
+    `Theme: ${post.theme}.`,
+    scene.visual,
+
+    // Narration — written in Portuguese so the model uses the right language
+    scene.narration
+      ? `A confident Brazilian male voice narrates: "${scene.narration}"`
+      : null,
+
+    // Background audio
+    isFirst
+      ? `Background: dramatic cinematic music starting strong with ambient sound effects.`
+      : `Background: continuing cinematic music with ambient sound effects matching the scene.`,
+
+    // Hook for first scene
+    isFirst
+      ? `This is the opening scene — grab attention immediately. The narrator opens with: "${s.hook}"`
+      : null,
+
+    // CTA for last scene
+    isLast && s.cta
+      ? `The narrator ends with: "${s.cta}"`
+      : null,
+
+    // Style and critical constraints
+    `Style: professional cinematic vertical video, smooth camera movement, dramatic lighting, high production quality.`,
+    `CRITICAL: Do NOT render any text, subtitles, captions, watermarks, or written words on screen. The video must be purely visual with spoken narration only — no on-screen text of any kind.`,
+  ].filter(Boolean).join(' ')
+}
+
+function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedSceneUrls, onMediaSaved, onDeleted, onMediaGenerated }: {
   post: SchedulePost
   day: ScheduleDay
   onClose: () => void
   scheduleId?: string | null
   mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string } | null
+  persistedSceneUrls?: (string | null)[]
   onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
   onDeleted?: () => void
   onMediaGenerated?: (key: string, src: string, mimeType: string) => void
@@ -1834,7 +2211,16 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
   const [imageProgress, setImageProgress] = useState(0)
-  const [reelDuration, setReelDuration] = useState<8 | 15 | 22 | 30>(30)
+  const [reelDuration, setReelDuration] = useState<4 | 6 | 8>(8)
+  // Scene state
+  const sceneCount = isReelType ? (post.script?.scenes?.length ?? 0) : 0
+  const [activeDetailScene, setActiveDetailScene] = useState(0)
+  const [sceneVideos, setSceneVideos] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))
+  const [sceneVideoGenerating, setSceneVideoGenerating] = useState<boolean[]>(() => Array(sceneCount).fill(false))
+  const [sceneVideoProgress, setSceneVideoProgress] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))
+  const [generatingAllScenes, setGeneratingAllScenes] = useState(false)
+  const [concatenating, setConcatenating] = useState(false)
+  const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const scheduleIdRef = useRef(scheduleId)
   scheduleIdRef.current = scheduleId
@@ -1922,8 +2308,9 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
     return () => clearInterval(interval)
   }, [mediaGenerating, isImageType]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-gera vídeo de reel se ainda não há vídeo
+  // Auto-gera vídeo de reel se ainda não há vídeo (apenas reels sem cenas — cenas são geradas manualmente)
   useEffect(() => {
+    if (isReelType && sceneCount > 0) return
     const hasVideo = !!generatedVideo || !!mediaEntry?.videoUrl
     if (isReelType && !hasVideo) {
       handleGenerateVideo()
@@ -1954,6 +2341,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
     base64: string,
     mimeType: 'image/png' | 'image/jpeg' | 'video/mp4',
     slideIndex?: number,
+    sceneIndex?: number,
   ) {
     const currentScheduleId = scheduleIdRef.current
     if (!currentScheduleId) {
@@ -1981,6 +2369,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
         mimeType,
       }
       if (slideIndex !== undefined) body.slideIndex = slideIndex
+      if (sceneIndex !== undefined) body.sceneIndex = sceneIndex
 
       const uploadRes = await fetch('/api/media/upload', {
         method: 'POST',
@@ -1991,10 +2380,14 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
       if (uploadRes.ok) {
         const { url } = await uploadRes.json() as { url: string }
         if (onMediaSaved) {
-          const targetKey = slideIndex !== undefined ? `${mediaKey}::slide${slideIndex}` : mediaKey
-          onMediaSaved(targetKey, mimeType !== 'video/mp4' ? url : null, mimeType === 'video/mp4' ? url : null)
-          // Slide 0 also updates main key for thumbnail
-          if (slideIndex === 0) onMediaSaved(mediaKey, url, null)
+          if (sceneIndex !== undefined) {
+            onMediaSaved(`${mediaKey}::scene${sceneIndex}`, null, url)
+          } else {
+            const targetKey = slideIndex !== undefined ? `${mediaKey}::slide${slideIndex}` : mediaKey
+            onMediaSaved(targetKey, mimeType !== 'video/mp4' ? url : null, mimeType === 'video/mp4' ? url : null)
+            // Slide 0 also updates main key for thumbnail
+            if (slideIndex === 0) onMediaSaved(mediaKey, url, null)
+          }
         }
       } else {
         const errBody = await uploadRes.json().catch(() => ({}))
@@ -2117,6 +2510,108 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
       setVideoProgress(null)
     } finally {
       setMediaGenerating(false)
+    }
+  }
+
+  async function handleGenerateScene(sceneIdx: number) {
+    setSceneVideoGenerating(prev => prev.map((v, i) => i === sceneIdx ? true : v))
+    setSceneVideoProgress(prev => prev.map((v, i) => i === sceneIdx ? 'Iniciando...' : v))
+    setMediaError(null)
+
+    const scene = post.script!.scenes[sceneIdx]
+    const dur = toVeoDuration(parseSceneDurationSeconds(scene.time))
+
+    try {
+      const res = await fetch('/api/media/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: buildSceneVideoPrompt(post, sceneIdx),
+          targetDuration: dur,
+        }),
+      })
+      if (!res.ok || !res.body) throw new Error('Falha ao conectar ao servidor')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const parts = buf.split('\n\n')
+        buf = parts.pop() ?? ''
+        for (const part of parts) {
+          const line = part.replace(/^data: /, '').trim()
+          if (!line) continue
+          try {
+            const evt = JSON.parse(line) as { type: string; message?: string; videoData?: string }
+            if (evt.type === 'start' || evt.type === 'progress') {
+              setSceneVideoProgress(prev => prev.map((v, i) => i === sceneIdx ? (evt.message ?? v) : v))
+            } else if (evt.type === 'complete' && evt.videoData) {
+              setSceneVideos(prev => prev.map((v, i) => i === sceneIdx ? evt.videoData! : v))
+              setSceneVideoProgress(prev => prev.map((v, i) => i === sceneIdx ? null : v))
+              onMediaGenerated?.(`${mediaKey}::scene${sceneIdx}`, evt.videoData, 'video/mp4')
+              await uploadMediaToStorage(evt.videoData, 'video/mp4', undefined, sceneIdx)
+            } else if (evt.type === 'error') {
+              throw new Error(evt.message ?? 'Erro ao gerar cena')
+            }
+          } catch {
+            // ignore parse errors on partial chunks
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        setMediaError(err instanceof Error ? err.message : 'Erro ao gerar cena')
+      }
+      setSceneVideoProgress(prev => prev.map((v, i) => i === sceneIdx ? null : v))
+    } finally {
+      setSceneVideoGenerating(prev => prev.map((v, i) => i === sceneIdx ? false : v))
+    }
+  }
+
+  async function handleGenerateAllScenes() {
+    setGeneratingAllScenes(true)
+    setMediaError(null)
+    for (let i = 0; i < sceneCount; i++) {
+      await handleGenerateScene(i)
+    }
+    setGeneratingAllScenes(false)
+  }
+
+  async function handleConcatenate() {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+
+    // Resolve URLs for all scenes (persisted URLs only — base64 not supported server-side)
+    const urls: (string | null)[] = Array.from({ length: sceneCount }, (_, i) =>
+      persistedSceneUrls?.[i] ?? null
+    )
+
+    const missing = urls.filter(u => !u).length
+    if (missing > 0) {
+      setMediaError(`${missing} cena(s) ainda não salva(s). Gere e aguarde o upload de todas as cenas antes de concatenar.`)
+      return
+    }
+
+    setConcatenating(true)
+    setMediaError(null)
+    try {
+      const res = await fetch('/api/media/concat-scenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, sceneUrls: urls }),
+      })
+      const data = await res.json() as { url?: string; error?: string }
+      if (!res.ok || !data.url) throw new Error(data.error ?? 'Erro ao concatenar')
+      setFinalVideoUrl(data.url)
+      onMediaSaved?.(mediaKey, null, data.url)
+    } catch (err) {
+      setMediaError(err instanceof Error ? err.message : 'Erro ao concatenar vídeos')
+    } finally {
+      setConcatenating(false)
     }
   }
 
@@ -2459,7 +2954,151 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
           </div>
         )}
 
-        {displayVideoSrc && (
+        {/* ── Scene Viewer (reels com cenas) ── */}
+        {isReelType && sceneCount > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1 shrink-0">
+                <Clapperboard className="size-3" /> Cenas ({sceneCount})
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5 text-xs"
+                  disabled={generatingAllScenes || sceneVideoGenerating.some(Boolean)}
+                  onClick={handleGenerateAllScenes}
+                >
+                  {generatingAllScenes ? (
+                    <><Loader2 className="size-3 animate-spin" />{sceneVideos.filter(Boolean).length}/{sceneCount}...</>
+                  ) : (
+                    <><Sparkles className="size-3" />Gerar todas</>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {post.script?.scenes.map((scene, idx) => {
+              const b64Video = sceneVideos[idx]
+              const persistedUrl = persistedSceneUrls?.[idx] ?? null
+              const videoSrc = b64Video ? `data:video/mp4;base64,${b64Video}` : persistedUrl
+              const generating = sceneVideoGenerating[idx]
+              const progress = sceneVideoProgress[idx]
+              return (
+                <div key={idx} className="border rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b">
+                    <span className="text-xs font-medium">Cena {idx + 1}</span>
+                    <span className="text-[10px] text-muted-foreground">{scene.time}</span>
+                  </div>
+                  {generating && (
+                    <div className="aspect-[9/16] bg-muted/50 relative overflow-hidden">
+                      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3">
+                        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                        {progress && <p className="text-[9px] text-muted-foreground text-center">{progress}</p>}
+                      </div>
+                    </div>
+                  )}
+                  {!generating && videoSrc && (
+                    <video src={videoSrc} controls className="w-full" />
+                  )}
+                  {!generating && !videoSrc && (
+                    <div className="aspect-[9/16] bg-muted/20 flex flex-col items-center justify-center gap-2 p-3">
+                      <Clapperboard className="size-6 text-muted-foreground/40" />
+                      <p className="text-[10px] text-muted-foreground text-center leading-relaxed">{scene.visual}</p>
+                    </div>
+                  )}
+                  <div className="p-2 flex gap-1.5">
+                    {videoSrc && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-7 text-xs shrink-0"
+                        onClick={() => {
+                          const a = document.createElement('a')
+                          a.href = videoSrc
+                          a.download = `${post.theme.slice(0, 30).replace(/\s+/g, '-')}-cena-${idx + 1}.mp4`
+                          a.click()
+                        }}
+                      >
+                        <Download className="size-3" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant={videoSrc ? 'outline' : 'default'}
+                      className="flex-1 gap-1.5 h-7 text-xs"
+                      disabled={generating || generatingAllScenes}
+                      onClick={() => handleGenerateScene(idx)}
+                    >
+                      {generating ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                      {generating ? 'Gerando...' : videoSrc ? 'Gerar novamente' : 'Gerar cena'}
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* ── Concatenar cenas em vídeo final ── */}
+            {(() => {
+              const readyCount = Array.from({ length: sceneCount }, (_, i) => persistedSceneUrls?.[i] ?? null).filter(Boolean).length
+              const hasFinal = !!finalVideoUrl || !!mediaEntry?.videoUrl
+              if (readyCount < 2 && !hasFinal) return null
+              const finalSrc = finalVideoUrl ?? mediaEntry?.videoUrl ?? null
+              return (
+                <div className="border-t pt-3 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+                      <Film className="size-3" /> Vídeo final
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      {finalSrc && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 gap-1.5 text-xs"
+                          onClick={() => {
+                            const a = document.createElement('a')
+                            a.href = finalSrc
+                            a.download = `${post.theme.slice(0, 30).replace(/\s+/g, '-')}-final.mp4`
+                            a.click()
+                          }}
+                        >
+                          <Download className="size-3" /> Baixar
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant={finalSrc ? 'outline' : 'default'}
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={concatenating || generatingAllScenes || sceneVideoGenerating.some(Boolean) || readyCount < 2}
+                        onClick={handleConcatenate}
+                        title={readyCount < 2 ? 'Salve pelo menos 2 cenas para concatenar' : undefined}
+                      >
+                        {concatenating ? (
+                          <><Loader2 className="size-3 animate-spin" />Concatenando...</>
+                        ) : (
+                          <><Film className="size-3" />{finalSrc ? 'Gerar novamente' : `Juntar ${readyCount} cenas`}</>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  {finalSrc && (
+                    <video src={finalSrc} controls className="w-full rounded-xl border shadow-sm" />
+                  )}
+                  {!finalSrc && readyCount >= 2 && (
+                    <p className="text-[10px] text-muted-foreground bg-muted/30 rounded-lg p-2.5">
+                      {readyCount}/{sceneCount} cenas prontas. Clique em &ldquo;Juntar {readyCount} cenas&rdquo; para gerar o vídeo completo.
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
+        {/* ── Single video (reels sem cenas) ── */}
+        {!(isReelType && sceneCount > 0) && displayVideoSrc && (
           <div className="space-y-2">
             <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
               <Sparkles className="size-3" /> Vídeo gerado
@@ -2472,7 +3111,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
           </div>
         )}
 
-        {videoProgress && (
+        {!(isReelType && sceneCount > 0) && videoProgress && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg p-3">
             <Loader2 className="size-3 animate-spin shrink-0" />
             <span>{videoProgress}</span>
@@ -2485,12 +3124,12 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
           </div>
         )}
 
-        {/* ── Seletor de duração (somente reels) ── */}
-        {!isMultiFrame && !isImageType && (
+        {/* ── Seletor de duração (somente reels sem cenas) ── */}
+        {!isMultiFrame && !isImageType && !(isReelType && sceneCount > 0) && (
           <div className="flex items-center gap-2 pt-1">
             <span className="text-xs text-muted-foreground shrink-0">Duração:</span>
             <div className="flex gap-1">
-              {([8, 15, 22, 30] as const).map(d => (
+              {([4, 6, 8] as const).map(d => (
                 <button
                   key={d}
                   onClick={() => setReelDuration(d)}
@@ -2508,8 +3147,8 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, onMediaSav
           </div>
         )}
 
-        {/* ── Action buttons (post / story / reel — não multi-frame) ── */}
-        {!isMultiFrame && (
+        {/* ── Action buttons (post / story / reel sem cenas — não multi-frame) ── */}
+        {!isMultiFrame && !(isReelType && sceneCount > 0) && (
           <div className="flex gap-2 pt-1">
             {(displayImageSrc || displayVideoSrc) && (
               <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={handleDownload}>

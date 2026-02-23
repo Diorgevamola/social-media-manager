@@ -32,6 +32,9 @@ export interface InstagramAccount {
   color_palette: string[] | null
   // Restrições de conteúdo
   negative_words: string[] | null
+  // Base de conhecimento
+  knowledge_base_enabled: boolean
+  knowledge_base_influence: number
   // Conexão OAuth com Meta
   access_token: string | null
   token_expires_at: string | null
@@ -117,6 +120,17 @@ export interface ApiKey {
   revoked_at: string | null
 }
 
+export interface KnowledgeDoc {
+  id: string
+  account_id: string
+  user_id: string
+  file_name: string
+  file_size: number | null
+  file_url: string | null
+  extracted_text: string | null
+  created_at: string
+}
+
 export interface AiUsageLog {
   id: string
   user_id: string | null
@@ -168,6 +182,8 @@ export type Database = {
           strategic_notes?: string | null
           color_palette?: string[] | null
           negative_words?: string[] | null
+          knowledge_base_enabled?: boolean
+          knowledge_base_influence?: number
           access_token?: string | null
           token_expires_at?: string | null
           ig_user_id?: string | null
@@ -191,6 +207,8 @@ export type Database = {
           strategic_notes?: string | null
           color_palette?: string[] | null
           negative_words?: string[] | null
+          knowledge_base_enabled?: boolean
+          knowledge_base_influence?: number
           access_token?: string | null
           token_expires_at?: string | null
           ig_user_id?: string | null
@@ -325,6 +343,24 @@ export type Database = {
           publish_error?: string | null
           publish_attempts?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      account_knowledge_docs: {
+        Row: KnowledgeDoc
+        Insert: {
+          id?: string
+          account_id: string
+          user_id: string
+          file_name: string
+          file_size?: number | null
+          file_url?: string | null
+          extracted_text?: string | null
+          created_at?: string
+        }
+        Update: {
+          file_name?: string
+          extracted_text?: string | null
         }
         Relationships: []
       }

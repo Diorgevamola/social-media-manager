@@ -76,13 +76,23 @@ export async function GET(request: Request) {
         postId: p.id,
       }
 
-      // Populate per-slide keys for carousel recovery
+      // Populate per-slide and per-scene keys for recovery
       if (p.slide_image_urls) {
-        for (const [idx, url] of Object.entries(p.slide_image_urls)) {
-          mediaMap[`${key}::slide${idx}`] = {
-            imageUrl: url,
-            videoUrl: null,
-            postId: p.id,
+        for (const [slKey, url] of Object.entries(p.slide_image_urls)) {
+          if (slKey.startsWith('scene')) {
+            // Reel scene video (stored with "sceneN" keys)
+            mediaMap[`${key}::${slKey}`] = {
+              imageUrl: null,
+              videoUrl: url,
+              postId: p.id,
+            }
+          } else {
+            // Carousel slide (numeric keys "0", "1", etc.)
+            mediaMap[`${key}::slide${slKey}`] = {
+              imageUrl: url,
+              videoUrl: null,
+              postId: p.id,
+            }
           }
         }
       }

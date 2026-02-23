@@ -16,6 +16,8 @@ const updateSchema = z.object({
   strategic_notes: z.string().nullable().optional(),
   color_palette: z.array(z.string()).optional(),
   negative_words: z.array(z.string()).optional(),
+  knowledge_base_enabled: z.boolean().optional(),
+  knowledge_base_influence: z.number().int().refine(v => [30, 40, 50, 100].includes(v)).optional(),
 })
 
 export async function PATCH(

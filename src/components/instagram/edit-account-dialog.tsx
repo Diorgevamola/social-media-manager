@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ColorPaletteInput } from '@/components/instagram/color-palette-input'
 import { NegativeWordsInput } from '@/components/instagram/negative-words-input'
+import { KnowledgeBaseUploader } from '@/components/instagram/knowledge-base-uploader'
 import { Loader2, Pencil } from 'lucide-react'
 import type { InstagramAccount, BrandVoice, MainGoal } from '@/types/database'
 
@@ -39,6 +40,8 @@ export function EditAccountDialog({ account }: EditAccountDialogProps) {
     website: account.website ?? '',
     color_palette: account.color_palette ?? [],
     negative_words: account.negative_words ?? [],
+    knowledge_base_enabled: account.knowledge_base_enabled ?? true,
+    knowledge_base_influence: account.knowledge_base_influence ?? 50,
   })
 
   function handleChange(field: string, value: string) {
@@ -73,6 +76,8 @@ export function EditAccountDialog({ account }: EditAccountDialogProps) {
           strategic_notes: form.strategic_notes || null,
           color_palette: form.color_palette.length > 0 ? form.color_palette : [],
           negative_words: form.negative_words.length > 0 ? form.negative_words : [],
+          knowledge_base_enabled: form.knowledge_base_enabled,
+          knowledge_base_influence: form.knowledge_base_influence,
         }),
       })
 
@@ -262,6 +267,22 @@ export function EditAccountDialog({ account }: EditAccountDialogProps) {
                   onChange={(e) => handleChange('website', e.target.value)}
                 />
               </div>
+            </div>
+
+            {/* Base de Conhecimento */}
+            <div className="border rounded-lg p-3 bg-muted/20 space-y-1">
+              <KnowledgeBaseUploader
+                accountId={account.id}
+                enabled={form.knowledge_base_enabled}
+                influence={form.knowledge_base_influence}
+                onSettingsChange={(enabled, influence) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    knowledge_base_enabled: enabled,
+                    knowledge_base_influence: influence,
+                  }))
+                }
+              />
             </div>
 
             <div className="flex gap-2 pt-1">

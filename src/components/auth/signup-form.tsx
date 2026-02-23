@@ -58,7 +58,7 @@ export function SignupForm() {
     return (
       <div className="text-center space-y-4">
         <div className="flex justify-center">
-          <CheckCircle className="size-12 text-green-500" />
+          <CheckCircle className="size-12 text-chart-2" aria-hidden="true" />
         </div>
         <h3 className="text-lg font-semibold">Verifique seu e-mail</h3>
         <p className="text-muted-foreground">

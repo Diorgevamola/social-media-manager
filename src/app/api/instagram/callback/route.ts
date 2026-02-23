@@ -5,6 +5,7 @@ import {
   getLongLivedToken,
   getInstagramUserProfile,
 } from '@/lib/instagram/client'
+import { encryptToken } from '@/lib/token-crypto'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
     const { error: updateError } = await supabase
       .from('instagram_accounts')
       .update({
-        access_token: longToken,
+        access_token: encryptToken(longToken),
         token_expires_at: tokenExpiresAt,
         ig_user_id: igUserId,
         facebook_page_id: null, // não utilizado no novo fluxo

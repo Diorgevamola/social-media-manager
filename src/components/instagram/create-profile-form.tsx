@@ -11,6 +11,8 @@ import { Loader2, Sparkles } from 'lucide-react'
 import type { BrandVoice, MainGoal } from '@/types/database'
 import { ColorPaletteInput } from '@/components/instagram/color-palette-input'
 import { NegativeWordsInput } from '@/components/instagram/negative-words-input'
+import { KnowledgeBaseUploader } from '@/components/instagram/knowledge-base-uploader'
+import { CheckCircle2 } from 'lucide-react'
 
 interface CreateProfileFormProps {
   onSuccess?: () => void
@@ -57,6 +59,9 @@ export function CreateProfileForm({ onSuccess }: CreateProfileFormProps) {
   const [researching, setResearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [researchInput, setResearchInput] = useState('')
+  const [createdAccountId, setCreatedAccountId] = useState<string | null>(null)
+  const [kbEnabled, setKbEnabled] = useState(true)
+  const [kbInfluence, setKbInfluence] = useState(50)
 
   const [form, setForm] = useState({
     username: '',
@@ -147,13 +152,66 @@ export function CreateProfileForm({ onSuccess }: CreateProfileFormProps) {
         throw new Error(data.error || 'Erro ao criar conta')
       }
 
-      router.refresh()
-      onSuccess?.()
+      // Salvar configurações de knowledge base
+      if (data.account?.id) {
+        await fetch(`/api/instagram/accounts/${data.account.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            knowledge_base_enabled: kbEnabled,
+            knowledge_base_influence: kbInfluence,
+          }),
+        })
+        setCreatedAccountId(data.account.id)
+      } else {
+        router.refresh()
+        onSuccess?.()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
     } finally {
       setLoading(false)
     }
+  }
+
+  // Passo 2: conta criada, aguardando upload de docs
+  if (createdAccountId) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+          <CheckCircle2 className="size-4 shrink-0" />
+          <span>Conta criada com sucesso!</span>
+        </div>
+
+        <div className="border rounded-lg p-3 bg-muted/20">
+          <KnowledgeBaseUploader
+            accountId={createdAccountId}
+            enabled={kbEnabled}
+            influence={kbInfluence}
+            onSettingsChange={async (enabled, influence) => {
+              setKbEnabled(enabled)
+              setKbInfluence(influence)
+              await fetch(`/api/instagram/accounts/${createdAccountId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ knowledge_base_enabled: enabled, knowledge_base_influence: influence }),
+              })
+            }}
+          />
+        </div>
+
+        <Button
+          type="button"
+          className="w-full"
+          onClick={() => {
+            router.refresh()
+            onSuccess?.()
+          }}
+        >
+          Concluir
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -354,6 +412,48 @@ export function CreateProfileForm({ onSuccess }: CreateProfileFormProps) {
           </div>
         </div>
       </div>
+
+        {/* Configurações de Base de Conhecimento */}
+        <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Base de Conhecimento</p>
+              <p className="text-[11px] text-muted-foreground">
+                Após criar a conta, você poderá enviar PDFs com estratégias e briefings.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setKbEnabled(!kbEnabled)}
+              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                kbEnabled ? 'bg-primary' : 'bg-input'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform ${
+                  kbEnabled ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+          {kbEnabled && (
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                Influência no cronograma:
+              </span>
+              <select
+                value={kbInfluence}
+                onChange={(e) => setKbInfluence(parseInt(e.target.value))}
+                className="h-7 text-xs rounded-md border border-input bg-background px-2 focus:outline-none"
+              >
+                <option value={30}>30%</option>
+                <option value={40}>40%</option>
+                <option value={50}>50%</option>
+                <option value={100}>100%</option>
+              </select>
+            </div>
+          )}
+        </div>
 
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? (
