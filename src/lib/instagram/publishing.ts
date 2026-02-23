@@ -1,6 +1,7 @@
 import type { SchedulePostRow, InstagramAccount } from '@/types/database'
 
-const GRAPH = 'https://graph.facebook.com/v21.0'
+// Tokens obtidos via Instagram Business Login (IGAA...) funcionam com graph.instagram.com
+const GRAPH = 'https://graph.instagram.com/v21.0'
 
 async function graphPost<T>(
   path: string,
