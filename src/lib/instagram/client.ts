@@ -60,6 +60,7 @@ export function getInstagramOAuthUrl(redirectUri: string, state?: string): strin
       'instagram_business_manage_comments',
     ].join(','),
     response_type: 'code',
+    force_authentication: 'true',
   })
 
   if (state) params.set('state', state)
