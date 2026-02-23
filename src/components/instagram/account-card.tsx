@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { InstagramAccount } from '@/types/database'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { DisconnectAccountButton } from '@/components/instagram/disconnect-button'
 import { DisconnectMetaButton } from '@/components/instagram/disconnect-meta-button'
 import { EditAccountDialog } from '@/components/instagram/edit-account-dialog'
+import { Camera, Loader2 } from 'lucide-react'
 
 interface AccountCardProps {
   account: InstagramAccount
@@ -31,6 +33,9 @@ const MAIN_GOAL_LABELS: Record<string, string> = {
 export function AccountCard({ account }: AccountCardProps) {
   const palette = account.color_palette?.filter(Boolean) ?? []
   const isMetaConnected = Boolean(account.ig_user_id)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(account.profile_picture_url)
+  const [fetchingAvatar, setFetchingAvatar] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
 
   // Aviso de token expirando em menos de 7 dias
   const tokenWarning = (() => {
@@ -41,16 +46,57 @@ export function AccountCard({ account }: AccountCardProps) {
     return daysLeft >= 0 && daysLeft < 7 ? daysLeft : null
   })()
 
+  async function handleFetchAvatar() {
+    setFetchingAvatar(true)
+    setAvatarError(null)
+    try {
+      const res = await fetch(`/api/instagram/accounts/${account.id}/fetch-avatar`, {
+        method: 'POST',
+      })
+      const data = await res.json() as { profile_picture_url?: string; error?: string }
+      if (!res.ok) {
+        setAvatarError(data.error ?? 'Erro ao buscar foto')
+      } else if (data.profile_picture_url) {
+        setAvatarUrl(data.profile_picture_url)
+      }
+    } catch {
+      setAvatarError('Erro de conexão')
+    } finally {
+      setFetchingAvatar(false)
+    }
+  }
+
   return (
     <Card className="py-4">
       <CardContent className="px-4">
         <div className="flex items-start gap-4">
-          <Avatar className="size-12 shrink-0">
-            <AvatarImage src={account.profile_picture_url ?? undefined} alt={account.username} />
-            <AvatarFallback className="text-sm font-bold">
-              {account.username[0]?.toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="flex flex-col items-center gap-1 shrink-0">
+            <div className="relative group">
+              <Avatar className="size-12">
+                <AvatarImage src={avatarUrl ?? undefined} alt={account.username} />
+                <AvatarFallback className="text-sm font-bold">
+                  {account.username[0]?.toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <button
+                onClick={handleFetchAvatar}
+                disabled={fetchingAvatar}
+                title={avatarUrl ? 'Atualizar foto de perfil' : 'Buscar foto de perfil'}
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+              >
+                {fetchingAvatar ? (
+                  <Loader2 className="size-4 text-white animate-spin" />
+                ) : (
+                  <Camera className="size-4 text-white" />
+                )}
+              </button>
+            </div>
+            {avatarError && (
+              <p className="text-[9px] text-destructive text-center leading-tight max-w-[52px]">
+                {avatarError}
+              </p>
+            )}
+          </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
