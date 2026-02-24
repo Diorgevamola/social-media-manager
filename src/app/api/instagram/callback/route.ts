@@ -13,7 +13,8 @@ export async function GET(request: Request) {
   const stateParam = searchParams.get('state')
   const errorParam = searchParams.get('error')
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const { origin } = new URL(request.url)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || origin
 
   if (errorParam) {
     return NextResponse.redirect(

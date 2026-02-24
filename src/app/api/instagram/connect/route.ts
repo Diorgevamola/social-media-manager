@@ -28,8 +28,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
   }
 
+  const { origin } = new URL(request.url)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || origin
   const state = Buffer.from(JSON.stringify({ accountId, userId: user.id })).toString('base64')
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/instagram/callback`
+  const redirectUri = `${appUrl}/api/instagram/callback`
   const url = getInstagramOAuthUrl(redirectUri, state)
 
   return NextResponse.redirect(url)
