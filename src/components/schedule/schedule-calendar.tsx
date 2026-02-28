@@ -9,8 +9,10 @@ import {
   Clock, Palette, Type, Camera, Clapperboard, Sparkles, X, Loader2, PlusCircle,
   Download, Plus, Trash2, FolderArchive, CheckCircle2, Send, Calendar, Pencil, RefreshCw,
 } from 'lucide-react'
-import type { GeneratedSchedule, SchedulePost, ScheduleDay } from '@/types/schedule'
+import type { GeneratedSchedule, SchedulePost, ScheduleDay, PostVisual, ReelScript, ReelScene } from '@/types/schedule'
 import type { MediaMap } from '@/app/dashboard/schedule/page'
+import type { PostStatus } from '@/types/post'
+import { PostStatusBadge } from '@/components/schedule/PostStatusBadge'
 import { AddPostDialog } from '@/components/schedule/add-post-dialog'
 
 type PostType = 'post' | 'reel' | 'carousel' | 'story' | 'story_sequence'
@@ -54,8 +56,27 @@ const PT_MONTHS = [
 
 const PT_DAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
+function parseSceneDurationSeconds(time: string): number {
+  const m = time.match(/(\d+)[^\d]+(\d+)/)
+  if (!m) return 8
+  return Math.max(1, parseInt(m[2]) - parseInt(m[1]))
+}
+
+function clampSeedanceDuration(secs: number): number {
+  return Math.min(12, Math.max(2, secs))
+}
+
 function safePostType(type: string): PostType {
   return (type as PostType) in TYPE_ICONS ? (type as PostType) : 'post'
+}
+
+function resolveCalendarPostStatus(
+  mediaEntry: { postId?: string; confirmed?: boolean; status?: 'planned' | 'published' } | null | undefined
+): PostStatus {
+  if (!mediaEntry?.postId) return 'draft'
+  if (mediaEntry.status === 'published') return 'published'
+  if (mediaEntry.status === 'planned' && mediaEntry.confirmed) return 'planned'
+  return 'draft'
 }
 
 interface SelectedPost {
@@ -447,8 +468,6 @@ function PostGallerySection({
   const [publishing, setPublishing] = useState<Set<string>>(new Set())
   const [publishedKeys, setPublishedKeys] = useState<Set<string>>(new Set())
   const [publishErrors, setPublishErrors] = useState<Record<string, string>>({})
-  const [calendarReelDuration, setCalendarReelDuration] = useState<4 | 6 | 8>(8)
-  const [showDurationPicker, setShowDurationPicker] = useState<string | null>(null)
   const [regeneratingPost, setRegeneratingPost] = useState<Set<string>>(new Set())
   const [confirmRegeneratePost, setConfirmRegeneratePost] = useState<{ key: string; postId: string; day: ScheduleDay; post: SchedulePost } | null>(null)
   const [localCaptions, setLocalCaptions] = useState<Record<string, string>>({})
@@ -497,6 +516,39 @@ function PostGallerySection({
         setPublishErrors(prev => ({ ...prev, [key]: data.error ?? 'Erro ao publicar' }))
       }
     } catch {
+      setPublishErrors(prev => ({ ...prev, [key]: 'Erro de rede' }))
+    } finally {
+      setPublishing(prev => { const n = new Set(prev); n.delete(key); return n })
+    }
+  }
+
+  async function handleRevertPublishNow(key: string, postId: string) {
+    console.log('[Revert] Iniciando reversão para:', { key, postId })
+    setPublishing(prev => new Set(prev).add(key))
+    setPublishErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+    try {
+      console.log('[Revert] Fazendo requisição para:', `/api/instagram/publish/${postId}/revert`)
+      const res = await fetch(`/api/instagram/publish/${postId}/revert`, { method: 'PUT' })
+      console.log('[Revert] Resposta recebida:', res.status, res.statusText)
+      const responseData = await res.json()
+      console.log('[Revert] Dados da resposta:', responseData)
+      if (res.ok) {
+        console.log('[Revert] Sucesso! Removendo de publishedKeys')
+        console.log('[Revert] Key sendo removida:', key)
+        setPublishedKeys(prev => {
+          console.log('[Revert] publishedKeys antes:', prev)
+          const n = new Set(prev)
+          n.delete(key)
+          console.log('[Revert] publishedKeys depois:', n)
+          return n
+        })
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        console.log('[Revert] Erro do servidor:', data.error)
+        setPublishErrors(prev => ({ ...prev, [key]: data.error ?? 'Erro ao reverter' }))
+      }
+    } catch (err) {
+      console.error('[Revert] Erro de rede:', err)
       setPublishErrors(prev => ({ ...prev, [key]: 'Erro de rede' }))
     } finally {
       setPublishing(prev => { const n = new Set(prev); n.delete(key); return n })
@@ -568,13 +620,13 @@ function PostGallerySection({
           // Scene-based: one Veo clip per scene
           for (let sceneIdx = 0; sceneIdx < sceneCnt; sceneIdx++) {
             const scene = post.script!.scenes[sceneIdx]
-            const dur = toVeoDuration(parseSceneDurationSeconds(scene.time))
+            const dur = clampSeedanceDuration(parseSceneDurationSeconds(scene.time))
             setVideoProgress(prev => ({ ...prev, [key]: `Gerando cena ${sceneIdx + 1}/${sceneCnt}...` }))
             try {
-              const res = await fetch('/api/media/generate-video', {
+              const res = await fetch('/api/media/generate-video-seedance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: buildSceneVideoPrompt(post, sceneIdx), targetDuration: dur }),
+                body: JSON.stringify({ prompt: buildSceneVideoPrompt(post, sceneIdx), duration: dur }),
               })
               if (!res.ok || !res.body) continue
               const reader = res.body.getReader()
@@ -610,10 +662,10 @@ function PostGallerySection({
         } else {
           // Fallback: single video for the whole reel
           setVideoProgress(prev => ({ ...prev, [key]: 'Iniciando geração do vídeo...' }))
-          const res = await fetch('/api/media/generate-video', {
+          const res = await fetch('/api/media/generate-video-seedance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: calendarReelDuration }),
+            body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
           })
           if (!res.ok || !res.body) throw new Error('Falha ao conectar')
           const reader = res.body.getReader()
@@ -1164,6 +1216,7 @@ function PostGallerySection({
             { length: expandedPost.post.script?.scenes?.length ?? 0 },
             (_, i) => mediaMap[`${expandedPost.day.date}::${expandedPost.post.theme}::scene${i}`]?.videoUrl ?? null
           )}
+          mediaMap={mediaMap}
           onMediaSaved={onMediaSaved}
           scheduleId={scheduleId}
           isApproved={approved.has(`${expandedPost.day.date}::${expandedPost.post.theme}`)}
@@ -1385,37 +1438,8 @@ function PostGallerySection({
                     {/* Linha 1: 3 ações principais com label */}
                     <div className="grid grid-cols-3 gap-1">
                       {/* Refazer mídia */}
-                      {post.type === 'reel' && showDurationPicker === key ? (
-                        <div className="col-span-3 flex items-center gap-1">
-                          <span className="text-[9px] text-muted-foreground mr-0.5">Duração:</span>
-                          {([4, 6, 8] as const).map(d => (
-                            <button
-                              key={d}
-                              onClick={() => {
-                                setCalendarReelDuration(d)
-                                setShowDurationPicker(null)
-                                generateForPost(day, post)
-                              }}
-                              className={`text-[10px] px-1.5 py-1 rounded border transition-colors ${
-                                calendarReelDuration === d
-                                  ? 'bg-primary text-primary-foreground border-primary'
-                                  : 'border-input hover:border-primary/60 text-muted-foreground bg-background'
-                              }`}
-                            >
-                              {d}s
-                            </button>
-                          ))}
-                          <button
-                            onClick={() => setShowDurationPicker(null)}
-                            className="p-1 rounded text-muted-foreground hover:text-foreground text-[10px]"
-                          >✕</button>
-                        </div>
-                      ) : (
                         <button
-                          onClick={() => {
-                            if (post.type === 'reel') setShowDurationPicker(key)
-                            else generateForPost(day, post)
-                          }}
+                          onClick={() => generateForPost(day, post)}
                           disabled={isGenerating || bulkGenerating}
                           className="flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Refazer mídia"
@@ -1428,7 +1452,6 @@ function PostGallerySection({
                             {isGenerating ? 'Gerando...' : 'Refazer mídia'}
                           </span>
                         </button>
-                      )}
 
                       {/* Refazer post completo */}
                       <button
@@ -1479,6 +1502,19 @@ function PostGallerySection({
                         >
                           {isPublishing ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}
                           {isPublishing ? 'Publicando...' : 'Publicar'}
+                        </button>
+                      )}
+
+                      {/* Reverter publicação */}
+                      {accountConnected && mapEntry?.postId && (mapEntry?.status === 'published' || publishedKeys.has(key)) && (
+                        <button
+                          onClick={() => handleRevertPublishNow(key, mapEntry.postId)}
+                          disabled={isPublishing}
+                          className="flex items-center justify-center gap-1 text-[10px] font-semibold py-1.5 px-2 rounded-lg transition-colors flex-1 bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Reverter publicação e retornar para agendado"
+                        >
+                          {isPublishing ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3 rotate-180" />}
+                          {isPublishing ? 'Revertendo...' : 'Reverter'}
                         </button>
                       )}
 
@@ -1552,6 +1588,7 @@ function PostExpandedModal({
   mediaEntry,
   persistedSlideUrls,
   persistedSceneUrls,
+  mediaMap,
   onMediaSaved,
   scheduleId,
   isApproved: _isApproved,
@@ -1572,6 +1609,7 @@ function PostExpandedModal({
   mediaEntry?: { imageUrl: string | null; videoUrl: string | null; postId: string; confirmed?: boolean; status?: string } | null
   persistedSlideUrls?: (string | null)[]
   persistedSceneUrls?: (string | null)[]
+  mediaMap?: Record<string, { imageUrl: string | null; videoUrl: string | null; postId: string }> | null
   onMediaSaved?: (key: string, imageUrl: string | null, videoUrl: string | null) => void
   scheduleId?: string | null
   isApproved: boolean
@@ -1594,6 +1632,7 @@ function PostExpandedModal({
 
   const [activeSlide, setActiveSlide] = useState(0)
   const [activeScene, setActiveScene] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   // Bloqueia scroll do container principal enquanto o modal está aberto
   useEffect(() => {
@@ -1609,11 +1648,22 @@ function PostExpandedModal({
     }
   }, [])
 
+  // Fecha lightbox com ESC
+  useEffect(() => {
+    if (!lightboxOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLightboxOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [lightboxOpen])
+
   const [generating, setGenerating] = useState(false)
   const [generatingSlide, setGeneratingSlide] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
-  const [modalReelDuration] = useState<4 | 6 | 8>(8)
   const [sceneVideoGenerating, setSceneVideoGenerating] = useState<boolean[]>(() => Array(sceneCount).fill(false))
   const [sceneVideoProgress, setSceneVideoProgress] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))
   const [generatingAllScenes, setGeneratingAllScenes] = useState(false)
@@ -1877,11 +1927,11 @@ function PostExpandedModal({
     setError(null)
     try {
       const scene = post.script!.scenes[sceneIdx]
-      const dur = toVeoDuration(parseSceneDurationSeconds(scene.time))
-      const res = await fetch('/api/media/generate-video', {
+      const dur = clampSeedanceDuration(parseSceneDurationSeconds(scene.time))
+      const res = await fetch('/api/media/generate-video-seedance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: buildSceneVideoPrompt(post, sceneIdx), targetDuration: dur }),
+        body: JSON.stringify({ prompt: buildSceneVideoPrompt(post, sceneIdx), duration: dur }),
       })
       if (!res.ok || !res.body) throw new Error('Falha ao conectar')
       const reader = res.body.getReader()
@@ -1935,10 +1985,10 @@ function PostExpandedModal({
     try {
       if (type === 'reel') {
         setVideoProgress('Iniciando geração do vídeo...')
-        const res = await fetch('/api/media/generate-video', {
+        const res = await fetch('/api/media/generate-video-seedance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: modalReelDuration }),
+          body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
         })
         if (!res.ok || !res.body) throw new Error('Falha ao conectar')
         const reader = res.body.getReader()
@@ -2004,11 +2054,15 @@ function PostExpandedModal({
     const slideEntry = sessionMedia[slideKey]
     if (slideEntry) return `data:${slideEntry.mimeType};base64,${slideEntry.src}`
 
-    // 2. URL persistida no banco (slide individual)
+    // 2. URL persistida no banco (slide individual) — via prop
     const persistedUrl = persistedSlideUrls?.[idx]
     if (persistedUrl) return persistedUrl
 
-    // 3. Fallbacks para slide 0
+    // 3. Tenta buscar direto do mediaMap (fallback para URLs que ainda não foram hidratadas em persistedSlideUrls)
+    const mediaMapEntry = mediaMap?.[slideKey]
+    if (mediaMapEntry?.imageUrl) return mediaMapEntry.imageUrl
+
+    // 4. Fallbacks para slide 0
     if (idx === 0) {
       const main = sessionMedia[mediaKey]
       if (main && main.mimeType !== 'video/mp4') return `data:${main.mimeType};base64,${main.src}`
@@ -2057,12 +2111,10 @@ function PostExpandedModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
-      onWheel={e => e.stopPropagation()}
     >
       <div
         className={`bg-background rounded-2xl border shadow-2xl w-full max-h-[92vh] flex flex-col overflow-hidden ${isMultiFrameModal ? 'max-w-5xl' : 'max-w-4xl'}`}
         onClick={e => e.stopPropagation()}
-        onWheel={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b shrink-0">
@@ -2084,11 +2136,11 @@ function PostExpandedModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-hidden min-h-0">
-          <div className="grid lg:grid-cols-[1fr_320px] h-full min-h-0">
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="grid lg:grid-cols-[1fr_320px] h-full max-h-full min-h-0 overflow-hidden">
 
             {/* Left: Mídia */}
-            <div className="flex flex-col gap-3 p-5 border-r overflow-y-auto">
+            <div className="flex flex-col gap-3 p-5 border-r overflow-y-auto h-full min-h-0">
               <div>
                 <h3 className="font-semibold text-base leading-snug">{post.theme}</h3>
                 {post.content_pillar && (
@@ -2098,9 +2150,14 @@ function PostExpandedModal({
 
               {/* Carrossel / Sequência de Stories — visualizador de frames */}
               {isMultiFrameModal && carouselSlideCount > 0 ? (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 min-h-0">
                   {/* Viewer principal do slide ativo */}
-                  <div className="relative bg-muted/30 rounded-xl overflow-hidden" style={{ height: 'min(45vh, 420px)' }}>
+                  <div
+                    className="relative bg-muted/30 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                    style={{ height: 'min(60vh, 550px)' }}
+                    onClick={() => currentSlideImg && setLightboxOpen(true)}
+                    title="Clique para ampliar"
+                  >
                     {generatingSlide === activeSlide ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                         <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -2140,7 +2197,7 @@ function PostExpandedModal({
                     )}
 
                     {/* Contador */}
-                    <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                    <div className="absolute top-2 left-2 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-white/20 shadow-lg">
                       {activeSlide + 1}/{carouselSlideCount}
                     </div>
                   </div>
@@ -2176,7 +2233,7 @@ function PostExpandedModal({
                                     ? 'border-border hover:border-primary/60'
                                     : 'border-dashed border-muted-foreground/30 hover:border-primary/40'
                               }`}
-                              style={{ width: isStorySeq ? '42px' : '52px', aspectRatio: isStorySeq ? '9/16' : '4/5' }}
+                              style={{ width: isStorySeq ? '56px' : '68px', aspectRatio: isStorySeq ? '9/16' : '4/5' }}
                               title={`${frameLabel} ${i + 1}${img ? '' : ' — não gerado'}`}
                             >
                               {isGen ? (
@@ -2238,9 +2295,9 @@ function PostExpandedModal({
                 </div>
               ) : type === 'reel' && sceneCount > 0 ? (
                 /* Reel com cenas: viewer por cena */
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 min-h-0">
                   {/* Player principal da cena ativa */}
-                  <div className="relative bg-muted/30 rounded-xl overflow-hidden" style={{ height: 'min(45vh, 420px)' }}>
+                  <div className="relative bg-muted/30 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" style={{ height: 'min(60vh, 550px)' }}>
                     {sceneVideoGenerating[activeScene] ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                         <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -2282,7 +2339,7 @@ function PostExpandedModal({
                         </button>
                       </>
                     )}
-                    <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                    <div className="absolute top-2 left-2 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-white/20 shadow-lg">
                       Cena {activeScene + 1}/{sceneCount}
                     </div>
                     {post.script?.scenes?.[activeScene]?.time && (
@@ -2332,7 +2389,7 @@ function PostExpandedModal({
                                     ? 'border-border hover:border-primary/60'
                                     : 'border-dashed border-muted-foreground/30 hover:border-primary/40'
                               }`}
-                              style={{ width: '48px', aspectRatio: '9/16' }}
+                              style={{ width: '64px', aspectRatio: '9/16' }}
                               title={`Cena ${i + 1}${scene ? ` — ${scene.time}` : ''}`}
                             >
                               {isGen ? (
@@ -2406,9 +2463,13 @@ function PostExpandedModal({
               ) : (
                 /* Não-carrossel: imagem/vídeo */
                 <div className="space-y-3">
-                  <div className={`relative bg-muted/30 rounded-xl overflow-hidden ${
-                    type === 'story' ? 'aspect-[9/16] max-h-[55vh]' : 'aspect-square max-h-[55vh]'
-                  }`}>
+                  <div
+                    className={`relative bg-muted/30 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all ${
+                      type === 'story' ? 'aspect-[9/16] max-h-[65vh]' : 'aspect-square max-h-[65vh]'
+                    }`}
+                    onClick={() => mainSrc && setLightboxOpen(true)}
+                    title="Clique para ampliar"
+                  >
                     {generating ? (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -2465,7 +2526,7 @@ function PostExpandedModal({
             </div>
 
             {/* Right: Informações do post */}
-            <div className="p-5 space-y-4 overflow-y-auto">
+            <div className="p-5 space-y-4 overflow-y-auto h-full min-h-0">
               {/* Legenda — editável */}
               <div className="bg-muted/40 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1.5">
@@ -2551,15 +2612,28 @@ function PostExpandedModal({
                       </div>
                     ))}
                   </div>
-                  <div className="bg-muted/30 rounded-lg p-3 space-y-1">
-                    <p className="text-xs font-bold">{post.visual.headline}</p>
+
+                  {/* Headline */}
+                  <div>
+                    <p className="text-[10px] font-medium uppercase text-muted-foreground mb-1">Headline</p>
+                    <p className="text-xs font-bold bg-muted/30 rounded-lg p-2.5">{post.visual.headline}</p>
+                  </div>
+
+                  {/* Subline */}
+                  <div>
+                    <p className="text-[10px] font-medium uppercase text-muted-foreground mb-1">Subline</p>
                     {post.visual.subline && (
-                      <p className="text-[11px] text-muted-foreground">{post.visual.subline}</p>
+                      <p className="text-[11px] text-muted-foreground bg-muted/30 rounded-lg p-2.5">{post.visual.subline}</p>
                     )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground bg-muted/30 rounded-lg p-2.5 leading-relaxed">
-                    {post.visual.image_description}
-                  </p>
+
+                  {/* Image Description */}
+                  <div>
+                    <p className="text-[10px] font-medium uppercase text-muted-foreground mb-1">Descrição da Imagem</p>
+                    <p className="text-[11px] text-muted-foreground bg-muted/30 rounded-lg p-2.5 leading-relaxed">
+                      {post.visual.image_description}
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -2568,27 +2642,43 @@ function PostExpandedModal({
                   <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
                     <Clapperboard className="size-3" /> Roteiro · {post.script.duration}
                   </p>
+
+                  {/* Hook */}
                   <div className="bg-pink-50 dark:bg-pink-950/30 rounded-lg p-3 border border-pink-100 dark:border-pink-900">
                     <p className="text-[10px] font-medium text-pink-600 dark:text-pink-400 mb-1">Hook</p>
                     <p className="text-xs font-semibold italic">&ldquo;{post.script.hook}&rdquo;</p>
                   </div>
+
+                  {/* Cenas */}
                   <div className="space-y-2">
                     {post.script.scenes.map((scene, i) => (
                       <div key={i} className="flex gap-2">
                         <div className="shrink-0 size-6 rounded-full bg-muted flex items-center justify-center">
                           <span className="text-[9px] font-bold text-muted-foreground">{i + 1}</span>
                         </div>
-                        <div className="flex-1 bg-muted/30 rounded-lg p-2 space-y-1">
-                          <p className="text-[10px] text-muted-foreground">Visual</p>
-                          <p className="text-xs">{scene.visual}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">Narração</p>
-                          <p className="text-xs text-muted-foreground">{scene.narration}</p>
+                        <div className="flex-1 bg-muted/30 rounded-lg p-2 space-y-2">
+                          <div>
+                            <p className="text-[10px] text-muted-foreground font-medium mb-1">Visual</p>
+                            <p className="text-xs">{scene.visual}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-muted-foreground font-medium mb-1">Narração</p>
+                            <p className="text-xs text-muted-foreground">{scene.narration}</p>
+                          </div>
+                          {scene.text_overlay && (
+                            <div>
+                              <p className="text-[10px] text-muted-foreground font-medium mb-1">Sobreposição</p>
+                              <p className="text-xs text-muted-foreground italic">{scene.text_overlay}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* CTA */}
                   <div className="bg-muted/40 rounded-lg p-3">
-                    <p className="text-[10px] text-muted-foreground mb-1">CTA final</p>
+                    <p className="text-[10px] text-muted-foreground font-medium mb-1">CTA final</p>
                     <p className="text-xs font-medium">{post.script.cta}</p>
                   </div>
                 </div>
@@ -2725,6 +2815,76 @@ function PostExpandedModal({
           </div>
         )}
       </div>
+
+      {/* Lightbox Modal para visualizar em tela cheia */}
+      {lightboxOpen && (isMultiFrameModal ? currentSlideImg : mainSrc) && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <div className="relative max-w-[95vw] max-h-[95vh]" onClick={e => e.stopPropagation()}>
+            {isMultiFrameModal ? (
+              <>
+                {currentSlideImg && (
+                  <img
+                    src={currentSlideImg}
+                    alt={`Slide ${activeSlide + 1}`}
+                    className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"
+                  />
+                )}
+                {carouselSlideCount > 1 && (
+                  <>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        setActiveSlide(s => Math.max(0, s - 1))
+                      }}
+                      disabled={activeSlide === 0}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 size-12 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
+                    >
+                      <ChevronLeft className="size-6" />
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        setActiveSlide(s => Math.min(carouselSlideCount - 1, s + 1))
+                      }}
+                      disabled={activeSlide === carouselSlideCount - 1}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 size-12 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center disabled:opacity-20 transition-colors"
+                    >
+                      <ChevronRight className="size-6" />
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {mainIsVideo ? (
+                  <video
+                    src={mainSrc!}
+                    controls
+                    className="max-w-full max-h-[90vh] w-auto h-auto rounded-lg"
+                    autoPlay
+                  />
+                ) : (
+                  <img
+                    src={mainSrc!}
+                    alt={post.theme}
+                    className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"
+                  />
+                )}
+              </>
+            )}
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+              title="Fechar (Esc)"
+            >
+              <X className="size-8" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2799,18 +2959,6 @@ function buildVideoPrompt(post: SchedulePost): string {
 
 // ── Scene video helpers ─────────────────────────────────────────────────────
 
-function parseSceneDurationSeconds(time: string): number {
-  const m = time.match(/(\d+)[^\d]+(\d+)/)
-  if (!m) return 8
-  return Math.max(1, parseInt(m[2]) - parseInt(m[1]))
-}
-
-function toVeoDuration(secs: number): 4 | 6 | 8 {
-  if (secs <= 5) return 4
-  if (secs <= 7) return 6
-  return 8
-}
-
 function buildSceneVideoPrompt(post: SchedulePost, sceneIdx: number): string {
   const s = post.script
   if (!s) return `${post.theme}. Scene ${sceneIdx + 1}.`
@@ -2870,16 +3018,69 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
   onConfirmed?: (postId: string, confirmed: boolean) => void
   accountConnected?: boolean
 }) {
-  const type = safePostType(post.type)
+  // Estado local para 'post' que é atualizado após saves bem-sucedidos
+  const [localPost, setLocalPost] = useState<SchedulePost>(post)
+
+  // Sincronizar quando prop 'post' muda (ex: pai refrescou)
+  useEffect(() => {
+    setLocalPost(post)
+  }, [post])
+
+  // Habilitar scroll nas colunas do modal interceptando wheel events
+  useEffect(() => {
+    const handleWheelOnScrollable = (e: WheelEvent) => {
+      const target = e.target as HTMLElement
+
+      // Procura se há um ancestral com overflow-y-auto
+      let scrollableParent: HTMLElement | null = null
+      let current: HTMLElement | null = target
+
+      while (current) {
+        const styles = window.getComputedStyle(current)
+        // Checar se é scrollável por Tailwind classe ou por CSS
+        const isScrollable =
+          current.classList.contains('overflow-y-auto') ||
+          styles.overflowY === 'auto'
+
+        if (isScrollable && current.scrollHeight > current.clientHeight) {
+          scrollableParent = current
+          break
+        }
+        current = current.parentElement
+      }
+
+      // Se encontrou um parent scrollável, permitir scroll dele
+      if (scrollableParent && scrollableParent.scrollHeight > scrollableParent.clientHeight) {
+        const canScrollDown = scrollableParent.scrollTop < scrollableParent.scrollHeight - scrollableParent.clientHeight
+        const canScrollUp = scrollableParent.scrollTop > 0
+        const scrollingDown = e.deltaY > 0
+
+        // Só fazer preventDefault se realmente pode scrollar nessa direção
+        if ((scrollingDown && canScrollDown) || (!scrollingDown && canScrollUp)) {
+          e.preventDefault()
+          scrollableParent.scrollTop += e.deltaY
+        }
+      }
+    }
+
+    // Usar capture phase para interceptar antes dos ancestrais
+    document.addEventListener('wheel', handleWheelOnScrollable, { passive: false, capture: true })
+
+    return () => {
+      document.removeEventListener('wheel', handleWheelOnScrollable, { passive: false, capture: true })
+    }
+  }, [])
+
+  const type = safePostType(localPost.type)
   const Icon = TYPE_ICONS[type]
-  const mediaKey = `${day.date}::${post.theme}`
+  const mediaKey = `${day.date}::${localPost.theme}`
 
   const isImageType = type === 'post' || type === 'carousel' || type === 'story' || type === 'story_sequence'
   const isReelType = type === 'reel'
   const isCarousel = type === 'carousel'
   const isStorySequence = type === 'story_sequence'
   const isMultiFrame = isCarousel || isStorySequence
-  const carouselSlideCount = post.visual?.slides?.length ?? 0
+  const carouselSlideCount = localPost.visual?.slides?.length ?? 0
 
   // Base64 state (just generated this session)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
@@ -2896,9 +3097,8 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
   const [imageProgress, setImageProgress] = useState(0)
-  const [reelDuration, setReelDuration] = useState<4 | 6 | 8>(8)
   // Scene state
-  const sceneCount = isReelType ? (post.script?.scenes?.length ?? 0) : 0
+  const sceneCount = isReelType ? (localPost.script?.scenes?.length ?? 0) : 0
   const [sceneVideos, setSceneVideos] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))
   const [sceneVideoGenerating, setSceneVideoGenerating] = useState<boolean[]>(() => Array(sceneCount).fill(false))
   const [sceneVideoProgress, setSceneVideoProgress] = useState<(string | null)[]>(() => Array(sceneCount).fill(null))
@@ -2923,7 +3123,47 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
   const [publishingNow, setPublishingNow] = useState(false)
   const [publishedLocal, setPublishedLocal] = useState(false)
   const [publishNowError, setPublishNowError] = useState<string | null>(null)
+  const [reverting, setReverting] = useState(false)
+  const [revertError, setRevertError] = useState<string | null>(null)
   const isFullyPublished = isPublished || publishedLocal
+
+  // Edição inline de campos visuais
+  const [editingVisualField, setEditingVisualField] = useState<string | null>(null)
+  const [visualDraft, setVisualDraft] = useState<{
+    caption?: string
+    headline?: string
+    subline?: string | null
+    image_description?: string
+    background?: string
+    fontHeadline?: string
+    fontBody?: string
+  }>({
+    caption: localPost.caption ?? '',
+    headline: localPost.visual?.headline ?? '',
+    subline: localPost.visual?.subline ?? '',
+    image_description: localPost.visual?.image_description ?? '',
+    background: localPost.visual?.background ?? '',
+    fontHeadline: localPost.visual?.fonts.headline ?? '',
+    fontBody: localPost.visual?.fonts.body ?? '',
+  })
+  const [savingVisual, setSavingVisual] = useState(false)
+  const [visualSaveError, setVisualSaveError] = useState<string | null>(null)
+
+  // Edição de cenas (reel)
+  const [editingSceneIdx, setEditingSceneIdx] = useState<number | null>(null)
+  const [sceneDraft, setSceneDraft] = useState<Partial<ReelScene>>({})
+  const [savingScene, setSavingScene] = useState(false)
+
+  // Edição de slides (carousel)
+  const [editingSlideIdx, setEditingSlideIdx] = useState<number | null>(null)
+  const [slideDraft, setSlideDraft] = useState<string>('')
+  const [savingSlide, setSavingSlide] = useState(false)
+  const [slideSaveError, setSlideSaveError] = useState<string | null>(null)
+
+  // Edição de script (roteiro/reel)
+  const [editingScriptField, setEditingScriptField] = useState<string | null>(null)
+  const [scriptDraft, setScriptDraft] = useState<{ hook?: string; cta?: string }>({})
+  const [savingScript, setSavingScript] = useState(false)
 
   async function handlePublishNow() {
     const postId = mediaEntry?.postId
@@ -2942,6 +3182,36 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
       setPublishNowError('Erro de rede')
     } finally {
       setPublishingNow(false)
+    }
+  }
+
+  async function handleRevertPublish() {
+    const postId = mediaEntry?.postId
+    console.log('[RevertModal] Iniciando reversão para:', { postId })
+    if (!postId) {
+      console.log('[RevertModal] Sem postId, retornando')
+      return
+    }
+    setReverting(true)
+    setRevertError(null)
+    try {
+      console.log('[RevertModal] Fazendo requisição para:', `/api/instagram/publish/${postId}/revert`)
+      const res = await fetch(`/api/instagram/publish/${postId}/revert`, { method: 'PUT' })
+      console.log('[RevertModal] Resposta:', res.status, res.statusText)
+      if (res.ok) {
+        console.log('[RevertModal] Sucesso! Revertido com sucesso')
+        // Fecha a modal para refrescar os dados
+        onClose()
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        console.log('[RevertModal] Erro do servidor:', data.error)
+        setRevertError(data.error ?? 'Erro ao reverter')
+      }
+    } catch (err) {
+      console.error('[RevertModal] Erro de rede:', err)
+      setRevertError('Erro de rede')
+    } finally {
+      setReverting(false)
     }
   }
 
@@ -3010,6 +3280,192 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
       setDeleting(false)
       setConfirmDelete(false)
       console.error('[handleDelete]', err)
+    }
+  }
+
+  async function handleSaveVisualField(field: string) {
+    const postId = mediaEntry?.postId
+    if (!postId) return
+    setSavingVisual(true)
+    setVisualSaveError(null)
+    try {
+      // Monta o visual_data atualizado
+      const updatedVisual: PostVisual = {
+        ...localPost.visual!,
+        headline: visualDraft.headline ?? localPost.visual?.headline ?? '',
+        subline: visualDraft.subline ?? localPost.visual?.subline ?? null,
+        image_description: visualDraft.image_description ?? localPost.visual?.image_description ?? '',
+        background: visualDraft.background ?? localPost.visual?.background ?? '',
+        fonts: {
+          headline: visualDraft.fontHeadline ?? localPost.visual?.fonts.headline ?? '',
+          body: visualDraft.fontBody ?? localPost.visual?.fonts.body ?? '',
+        },
+        color_palette: localPost.visual?.color_palette ?? [],
+      }
+      const body: Record<string, unknown> = { visual_data: updatedVisual }
+      let caption = localPost.caption
+      if (field === 'caption') {
+        body.caption = visualDraft.caption
+        caption = visualDraft.caption
+      }
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Erro ao salvar')
+      }
+      // Atualizar estado local com os dados salvos
+      setLocalPost(prev => ({
+        ...prev,
+        caption,
+        visual: updatedVisual,
+      }))
+      setEditingVisualField(null)
+
+      // Refetch do post para sincronizar com servidor
+      try {
+        const fetchRes = await fetch(`/api/schedule/posts/${postId}`)
+        if (fetchRes.ok) {
+          const postData = await fetchRes.json() as SchedulePost
+          setLocalPost(postData)
+        }
+      } catch (err) {
+        console.error('[refetch post]', err)
+      }
+    } catch (err) {
+      setVisualSaveError(err instanceof Error ? err.message : 'Erro ao salvar')
+    } finally {
+      setSavingVisual(false)
+    }
+  }
+
+  async function handleSaveScene(sceneIdx: number) {
+    const postId = mediaEntry?.postId
+    if (!postId || !localPost.script) return
+    setSavingScene(true)
+    try {
+      const updatedScenes = localPost.script.scenes.map((scene, i) =>
+        i === sceneIdx ? { ...scene, ...sceneDraft } : scene
+      )
+      const updatedScript = { ...localPost.script, scenes: updatedScenes }
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script_data: updatedScript }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Erro ao salvar')
+      }
+      // Atualizar estado local com os dados salvos
+      setLocalPost(prev => ({
+        ...prev,
+        script: updatedScript,
+      }))
+      setEditingSceneIdx(null)
+
+      // Refetch do post para sincronizar com servidor
+      try {
+        const fetchRes = await fetch(`/api/schedule/posts/${postId}`)
+        if (fetchRes.ok) {
+          const postData = await fetchRes.json() as SchedulePost
+          setLocalPost(postData)
+        }
+      } catch (err) {
+        console.error('[refetch post]', err)
+      }
+    } catch (err) {
+      console.error('[handleSaveScene]', err)
+    } finally {
+      setSavingScene(false)
+    }
+  }
+
+  async function handleSaveScriptField(field: 'hook' | 'cta') {
+    const postId = mediaEntry?.postId
+    if (!postId || !localPost.script) return
+    setSavingScript(true)
+    try {
+      const updatedScript = {
+        ...localPost.script,
+        [field]: scriptDraft[field] ?? localPost.script[field],
+      }
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script_data: updatedScript }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Erro ao salvar')
+      }
+      setLocalPost(prev => ({
+        ...prev,
+        script: updatedScript,
+      }))
+      setEditingScriptField(null)
+      try {
+        const fetchRes = await fetch(`/api/schedule/posts/${postId}`)
+        if (fetchRes.ok) {
+          const postData = await fetchRes.json() as SchedulePost
+          setLocalPost(postData)
+        }
+      } catch (err) {
+        console.error('[refetch post]', err)
+      }
+    } catch (err) {
+      console.error('[handleSaveScriptField]', err)
+    } finally {
+      setSavingScript(false)
+    }
+  }
+
+  async function handleSaveSlideDescription(slideIdx: number) {
+    const postId = mediaEntry?.postId
+    if (!postId || !localPost.visual?.slides) return
+    setSavingSlide(true)
+    setSlideSaveError(null)
+    try {
+      const updatedSlides = localPost.visual.slides.map((slide, i) =>
+        i === slideIdx ? { ...slide, image_description: slideDraft } : slide
+      )
+      const updatedVisual: PostVisual = {
+        ...localPost.visual,
+        slides: updatedSlides,
+      }
+      const res = await fetch(`/api/schedule/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visual_data: updatedVisual }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Erro ao salvar')
+      }
+      // Atualizar estado local com os dados salvos
+      setLocalPost(prev => ({
+        ...prev,
+        visual: updatedVisual,
+      }))
+      setEditingSlideIdx(null)
+
+      // Refetch do post para sincronizar com servidor
+      try {
+        const fetchRes = await fetch(`/api/schedule/posts/${postId}`)
+        if (fetchRes.ok) {
+          const postData = await fetchRes.json() as SchedulePost
+          setLocalPost(postData)
+        }
+      } catch (err) {
+        console.error('[refetch post]', err)
+      }
+    } catch (err) {
+      setSlideSaveError(err instanceof Error ? err.message : 'Erro ao salvar')
+    } finally {
+      setSavingSlide(false)
     }
   }
 
@@ -3232,10 +3688,10 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
     abortRef.current = ctrl
 
     try {
-      const res = await fetch('/api/media/generate-video', {
+      const res = await fetch('/api/media/generate-video-seedance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: buildVideoPrompt(post), targetDuration: reelDuration }),
+        body: JSON.stringify({ prompt: buildVideoPrompt(post) }),
         signal: ctrl.signal,
       })
       if (!res.ok || !res.body) throw new Error('Falha ao conectar ao servidor')
@@ -3286,15 +3742,15 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
     setMediaError(null)
 
     const scene = post.script!.scenes[sceneIdx]
-    const dur = toVeoDuration(parseSceneDurationSeconds(scene.time))
+    const dur = clampSeedanceDuration(parseSceneDurationSeconds(scene.time))
 
     try {
-      const res = await fetch('/api/media/generate-video', {
+      const res = await fetch('/api/media/generate-video-seedance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: buildSceneVideoPrompt(post, sceneIdx),
-          targetDuration: dur,
+          duration: dur,
         }),
       })
       if (!res.ok || !res.body) throw new Error('Falha ao conectar ao servidor')
@@ -3398,16 +3854,16 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
   }
 
   return (
-    <Card className={`sticky top-6 overflow-hidden ${isFullyPublished ? 'ring-2 ring-green-500/40 border-green-500/50' : ''}`}>
+    <Card className={`sticky top-6 ${isFullyPublished ? 'ring-2 ring-green-500/40 border-green-500/50' : ''}`}>
       <div className={`px-4 py-3 border-b flex items-start justify-between gap-3 ${isFullyPublished ? 'bg-green-50/50 dark:bg-green-950/20' : ''}`}>
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${TYPE_COLORS[type]}`}>
             <Icon className="size-3" />
             {TYPE_LABELS[type]}
           </span>
-          {post.time && (
+          {localPost.time && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="size-3" />{post.time}
+              <Clock className="size-3" />{localPost.time}
             </span>
           )}
           {isFullyPublished && (
@@ -3484,7 +3940,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
                       {isConfirmed ? 'Confirmado' : 'Confirmar'}
                     </button>
                     <button
-                      onClick={() => { setRescheduleDate(day.date); setRescheduleTime(post.time ?? ''); setEditingSchedule(true) }}
+                      onClick={() => { setRescheduleDate(day.date); setRescheduleTime(localPost.time ?? ''); setEditingSchedule(true) }}
                       className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
                       title="Reagendar"
                     >
@@ -3502,6 +3958,17 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
                   >
                     {publishingNow ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}
                     Publicar agora
+                  </button>
+                )}
+                {accountConnected && isFullyPublished && (
+                  <button
+                    onClick={handleRevertPublish}
+                    disabled={reverting}
+                    className="flex items-center gap-1 text-[10px] font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+                    title="Reverter publicação e retornar para agendado"
+                  >
+                    {reverting ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3 rotate-180" />}
+                    Reverter
                   </button>
                 )}
               </div>
@@ -3548,12 +4015,15 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
               {publishNowError && (
                 <p className="text-[10px] text-destructive mt-1">{publishNowError}</p>
               )}
-              {post.content_pillar && (
-                <Badge variant="outline" className="text-[10px] h-4 mt-1.5">{post.content_pillar}</Badge>
+              {revertError && (
+                <p className="text-[10px] text-destructive mt-1">{revertError}</p>
               )}
-              {post.seasonal_hook && (
+              {localPost.content_pillar && (
+                <Badge variant="outline" className="text-[10px] h-4 mt-1.5">{localPost.content_pillar}</Badge>
+              )}
+              {localPost.seasonal_hook && (
                 <Badge className="text-[10px] h-4 mt-1 ml-1 bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300">
-                  🗓 {post.seasonal_hook}
+                  🗓 {localPost.seasonal_hook}
                 </Badge>
               )}
             </>
@@ -3561,17 +4031,56 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
         </div>
 
         {/* Caption */}
-        {post.caption && (
+        {localPost.caption && (
           <div className="bg-muted/40 rounded-lg p-3">
-            <p className="text-[10px] font-medium uppercase text-muted-foreground mb-1.5 flex items-center gap-1">
-              <Type className="size-3" /> Legenda
-            </p>
-            <p className="text-xs leading-relaxed whitespace-pre-wrap">{post.caption}</p>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
+                <Type className="size-3" /> Legenda
+              </p>
+              {mediaEntry?.postId && editingVisualField !== 'caption' && (
+                <button
+                  onClick={() => {
+                    setEditingVisualField('caption')
+                    setVisualDraft(d => ({ ...d, caption: localPost.caption ?? '' }))
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Pencil className="size-3" />
+                </button>
+              )}
+            </div>
+
+            {editingVisualField === 'caption' ? (
+              <div className="space-y-2">
+                <textarea
+                  className="w-full text-xs border rounded px-2 py-1.5 bg-background"
+                  rows={4}
+                  value={visualDraft.caption ?? ''}
+                  onChange={e => setVisualDraft(d => ({ ...d, caption: e.target.value }))}
+                />
+                {visualSaveError && <p className="text-[10px] text-destructive">{visualSaveError}</p>}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => handleSaveVisualField('caption')}
+                    disabled={savingVisual}
+                  >
+                    {savingVisual ? <Loader2 className="size-3 animate-spin" /> : 'Salvar'}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingVisualField(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs leading-relaxed whitespace-pre-wrap">{localPost.caption}</p>
+            )}
           </div>
         )}
 
         {/* Visual briefing (post / carousel / story) */}
-        {post.visual && (
+        {localPost.visual && (
           <div className="space-y-3">
             <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
               <Palette className="size-3" /> Briefing Visual
@@ -3581,7 +4090,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
             <div>
               <p className="text-[10px] text-muted-foreground mb-1.5">Paleta de cores</p>
               <div className="flex gap-2 flex-wrap">
-                {post.visual.color_palette.map((hex, i) => (
+                {localPost.visual.color_palette.map((hex, i) => (
                   <div key={i} className="flex flex-col items-center gap-1">
                     <div
                       className="size-8 rounded-lg border border-black/10 shadow-sm"
@@ -3594,93 +4103,390 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
             </div>
 
             {/* Headline / subline */}
-            <div className="bg-muted/30 rounded-lg p-3 space-y-1">
-              <p className="text-[10px] text-muted-foreground">Headline</p>
-              <p className="text-sm font-bold">{post.visual.headline}</p>
-              {post.visual.subline && (
-                <>
-                  <p className="text-[10px] text-muted-foreground mt-1">Subline</p>
-                  <p className="text-xs text-muted-foreground">{post.visual.subline}</p>
-                </>
+            <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+              {/* Headline field */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] font-medium text-muted-foreground">Headline</p>
+                  {mediaEntry?.postId && editingVisualField !== 'headline' && (
+                    <button
+                      onClick={() => {
+                        setEditingVisualField('headline')
+                        setVisualDraft(d => ({ ...d, headline: localPost.visual?.headline ?? '' }))
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="size-3" />
+                    </button>
+                  )}
+                </div>
+                {editingVisualField === 'headline' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      className="w-full text-xs border rounded px-2 py-1.5 bg-background"
+                      value={visualDraft.headline ?? ''}
+                      onChange={e => setVisualDraft(d => ({ ...d, headline: e.target.value }))}
+                    />
+                    {visualSaveError && <p className="text-[10px] text-destructive">{visualSaveError}</p>}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => handleSaveVisualField('headline')}
+                        disabled={savingVisual}
+                      >
+                        {savingVisual ? <Loader2 className="size-3 animate-spin" /> : 'Salvar'}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingVisualField(null)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm font-bold">{localPost.visual.headline}</p>
+                )}
+              </div>
+
+              {/* Subline field */}
+              {localPost.visual.subline && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] font-medium text-muted-foreground">Subline</p>
+                    {mediaEntry?.postId && editingVisualField !== 'subline' && (
+                      <button
+                        onClick={() => {
+                          setEditingVisualField('subline')
+                          setVisualDraft(d => ({ ...d, subline: localPost.visual?.subline ?? '' }))
+                        }}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="size-3" />
+                      </button>
+                    )}
+                  </div>
+                  {editingVisualField === 'subline' ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        className="w-full text-xs border rounded px-2 py-1.5 bg-background"
+                        value={visualDraft.subline ?? ''}
+                        onChange={e => setVisualDraft(d => ({ ...d, subline: e.target.value }))}
+                      />
+                      {visualSaveError && <p className="text-[10px] text-destructive">{visualSaveError}</p>}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="h-6 text-xs"
+                          onClick={() => handleSaveVisualField('subline')}
+                          disabled={savingVisual}
+                        >
+                          {savingVisual ? <Loader2 className="size-3 animate-spin" /> : 'Salvar'}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingVisualField(null)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{localPost.visual.subline}</p>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Fonts */}
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-muted/30 rounded-lg p-2.5">
-                <p className="text-[9px] text-muted-foreground mb-0.5">Fonte headline</p>
-                <p className="text-xs font-medium">{post.visual.fonts.headline}</p>
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="text-[9px] text-muted-foreground">Fonte headline</p>
+                  {mediaEntry?.postId && editingVisualField !== 'fontHeadline' && (
+                    <button
+                      onClick={() => {
+                        setEditingVisualField('fontHeadline')
+                        setVisualDraft(d => ({ ...d, fontHeadline: localPost.visual?.fonts.headline ?? '' }))
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="size-2" />
+                    </button>
+                  )}
+                </div>
+                {editingVisualField === 'fontHeadline' ? (
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      className="w-full text-[10px] border rounded px-1.5 py-1 bg-background"
+                      value={visualDraft.fontHeadline ?? ''}
+                      onChange={e => setVisualDraft(d => ({ ...d, fontHeadline: e.target.value }))}
+                    />
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        className="h-5 text-[10px] px-1"
+                        onClick={() => handleSaveVisualField('fontHeadline')}
+                        disabled={savingVisual}
+                      >
+                        {savingVisual ? <Loader2 className="size-2 animate-spin" /> : 'OK'}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-5 text-[10px] px-1" onClick={() => setEditingVisualField(null)}>
+                        ✕
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs font-medium">{localPost.visual.fonts.headline}</p>
+                )}
               </div>
               <div className="bg-muted/30 rounded-lg p-2.5">
-                <p className="text-[9px] text-muted-foreground mb-0.5">Fonte body</p>
-                <p className="text-xs font-medium">{post.visual.fonts.body}</p>
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="text-[9px] text-muted-foreground">Fonte body</p>
+                  {mediaEntry?.postId && editingVisualField !== 'fontBody' && (
+                    <button
+                      onClick={() => {
+                        setEditingVisualField('fontBody')
+                        setVisualDraft(d => ({ ...d, fontBody: localPost.visual?.fonts.body ?? '' }))
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="size-2" />
+                    </button>
+                  )}
+                </div>
+                {editingVisualField === 'fontBody' ? (
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      className="w-full text-[10px] border rounded px-1.5 py-1 bg-background"
+                      value={visualDraft.fontBody ?? ''}
+                      onChange={e => setVisualDraft(d => ({ ...d, fontBody: e.target.value }))}
+                    />
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        className="h-5 text-[10px] px-1"
+                        onClick={() => handleSaveVisualField('fontBody')}
+                        disabled={savingVisual}
+                      >
+                        {savingVisual ? <Loader2 className="size-2 animate-spin" /> : 'OK'}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-5 text-[10px] px-1" onClick={() => setEditingVisualField(null)}>
+                        ✕
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs font-medium">{localPost.visual.fonts.body}</p>
+                )}
               </div>
             </div>
 
             {/* Image description */}
             <div>
-              <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
-                <Camera className="size-3" /> Descrição da imagem
-              </p>
-              <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-2.5">
-                {post.visual.image_description}
-              </p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Camera className="size-3" /> Descrição da imagem
+                </p>
+                {mediaEntry?.postId && editingVisualField !== 'image_description' && (
+                  <button
+                    onClick={() => {
+                      setEditingVisualField('image_description')
+                      setVisualDraft(d => ({ ...d, image_description: localPost.visual?.image_description ?? '' }))
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="size-3" />
+                  </button>
+                )}
+              </div>
+              {editingVisualField === 'image_description' ? (
+                <div className="space-y-2">
+                  <textarea
+                    className="w-full text-xs border rounded px-2 py-1.5 bg-background"
+                    rows={3}
+                    value={visualDraft.image_description ?? ''}
+                    onChange={e => setVisualDraft(d => ({ ...d, image_description: e.target.value }))}
+                  />
+                  {visualSaveError && <p className="text-[10px] text-destructive">{visualSaveError}</p>}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => handleSaveVisualField('image_description')}
+                      disabled={savingVisual}
+                    >
+                      {savingVisual ? <Loader2 className="size-3 animate-spin" /> : 'Salvar'}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingVisualField(null)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-2.5">
+                  {localPost.visual.image_description}
+                </p>
+              )}
             </div>
 
             {/* Background */}
             <div>
-              <p className="text-[10px] text-muted-foreground mb-1">Fundo</p>
-              <p className="text-xs bg-muted/30 rounded-lg p-2.5 font-mono">{post.visual.background}</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-muted-foreground">Fundo</p>
+                {mediaEntry?.postId && editingVisualField !== 'background' && (
+                  <button
+                    onClick={() => {
+                      setEditingVisualField('background')
+                      setVisualDraft(d => ({ ...d, background: localPost.visual?.background ?? '' }))
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="size-3" />
+                  </button>
+                )}
+              </div>
+              {editingVisualField === 'background' ? (
+                <div className="space-y-2">
+                  <textarea
+                    className="w-full text-xs border rounded px-2 py-1.5 bg-background font-mono"
+                    rows={2}
+                    value={visualDraft.background ?? ''}
+                    onChange={e => setVisualDraft(d => ({ ...d, background: e.target.value }))}
+                  />
+                  {visualSaveError && <p className="text-[10px] text-destructive">{visualSaveError}</p>}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => handleSaveVisualField('background')}
+                      disabled={savingVisual}
+                    >
+                      {savingVisual ? <Loader2 className="size-3 animate-spin" /> : 'Salvar'}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setEditingVisualField(null)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs bg-muted/30 rounded-lg p-2.5 font-mono">{localPost.visual.background}</p>
+              )}
             </div>
           </div>
         )}
 
         {/* Reel script */}
-        {post.script && (
+        {localPost.script && (
           <div className="space-y-3">
             <p className="text-[10px] font-medium uppercase text-muted-foreground flex items-center gap-1">
-              <Clapperboard className="size-3" /> Roteiro do Reel · {post.script.duration}
+              <Clapperboard className="size-3" /> Roteiro do Reel · {localPost.script.duration}
             </p>
 
             {/* Hook */}
             <div className="bg-pink-50 dark:bg-pink-950/30 rounded-lg p-3 border border-pink-100 dark:border-pink-900">
               <p className="text-[10px] font-medium text-pink-600 dark:text-pink-400 mb-1">Hook (0-3s)</p>
-              <p className="text-xs font-semibold italic">&ldquo;{post.script.hook}&rdquo;</p>
+              <p className="text-xs font-semibold italic">&ldquo;{localPost.script.hook}&rdquo;</p>
             </div>
 
             {/* Scenes */}
             <div className="space-y-2">
-              {post.script.scenes.map((scene, i) => (
-                <div key={i} className="flex gap-2.5">
-                  <div className="shrink-0 text-center">
-                    <div className="size-6 rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-muted-foreground">{i + 1}</span>
+              {localPost.script.scenes.map((scene, i) => {
+                const isEditing = editingSceneIdx === i
+                return (
+                  <div key={i} className="flex gap-2.5">
+                    <div className="shrink-0 text-center">
+                      <div className="size-6 rounded-full bg-muted flex items-center justify-center">
+                        <span className="text-[9px] font-bold text-muted-foreground">{i + 1}</span>
+                      </div>
+                      <p className="text-[8px] text-muted-foreground mt-0.5 w-6 text-center leading-tight">{scene.time}</p>
                     </div>
-                    <p className="text-[8px] text-muted-foreground mt-0.5 w-6 text-center leading-tight">{scene.time}</p>
-                  </div>
-                  <div className="flex-1 bg-muted/30 rounded-lg p-2.5 space-y-1.5">
-                    <div>
-                      <p className="text-[9px] text-muted-foreground">Visual</p>
-                      <p className="text-xs">{scene.visual}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-muted-foreground">Narração</p>
-                      <p className="text-xs text-muted-foreground">{scene.narration}</p>
-                    </div>
-                    {scene.text_overlay && (
-                      <div className="bg-black/80 text-white rounded px-2 py-1 inline-block">
-                        <p className="text-[9px] font-bold">{scene.text_overlay}</p>
+                    {isEditing ? (
+                      <div className="flex-1 space-y-2">
+                        <div>
+                          <p className="text-[9px] text-muted-foreground mb-0.5">Visual</p>
+                          <textarea
+                            className="w-full text-[10px] border rounded px-1.5 py-1 bg-background"
+                            rows={2}
+                            value={sceneDraft.visual ?? scene.visual}
+                            onChange={e => setSceneDraft(d => ({ ...d, visual: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-muted-foreground mb-0.5">Narração</p>
+                          <textarea
+                            className="w-full text-[10px] border rounded px-1.5 py-1 bg-background"
+                            rows={2}
+                            value={sceneDraft.narration ?? scene.narration}
+                            onChange={e => setSceneDraft(d => ({ ...d, narration: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-muted-foreground mb-0.5">Texto (overlay)</p>
+                          <input
+                            type="text"
+                            className="w-full text-[10px] border rounded px-1.5 py-1 bg-background"
+                            value={sceneDraft.text_overlay ?? scene.text_overlay ?? ''}
+                            onChange={e => setSceneDraft(d => ({ ...d, text_overlay: e.target.value || null }))}
+                          />
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            className="h-5 text-[10px] px-2"
+                            onClick={() => handleSaveScene(i)}
+                            disabled={savingScene}
+                          >
+                            {savingScene ? <Loader2 className="size-2 animate-spin" /> : 'Salvar'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-5 text-[10px] px-2"
+                            onClick={() => setEditingSceneIdx(null)}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 bg-muted/30 rounded-lg p-2.5 space-y-1.5 group">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-[9px] text-muted-foreground">Visual</p>
+                            {mediaEntry?.postId && (
+                              <button
+                                onClick={() => {
+                                  setEditingSceneIdx(i)
+                                  setSceneDraft({ visual: scene.visual, narration: scene.narration, text_overlay: scene.text_overlay })
+                                }}
+                                className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Pencil className="size-2.5" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-xs">{scene.visual}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-muted-foreground">Narração</p>
+                          <p className="text-xs text-muted-foreground">{scene.narration}</p>
+                        </div>
+                        {scene.text_overlay && (
+                          <div className="bg-black/80 text-white rounded px-2 py-1 inline-block">
+                            <p className="text-[9px] font-bold">{scene.text_overlay}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             {/* CTA */}
             <div className="bg-muted/40 rounded-lg p-3">
               <p className="text-[10px] text-muted-foreground mb-1">CTA final</p>
-              <p className="text-xs font-medium">{post.script.cta}</p>
+              <p className="text-xs font-medium">{localPost.script.cta}</p>
             </div>
           </div>
         )}
@@ -3723,7 +4529,7 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
                 </Button>
               </div>
             </div>
-            {post.visual?.slides?.map((slide, idx) => {
+            {localPost.visual?.slides?.map((slide, idx) => {
               const img = carouselSlideImages[idx]
               const generating = carouselSlideGenerating[idx]
               return (
@@ -3749,8 +4555,53 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
                     />
                   )}
                   {!generating && !img && (
-                    <div className={`${isStorySequence ? 'aspect-[9/16]' : 'aspect-[4/5]'} bg-muted/20 flex items-center justify-center`}>
-                      <p className="text-[10px] text-muted-foreground text-center px-4 leading-relaxed">{slide.image_description}</p>
+                    <div className={`${isStorySequence ? 'aspect-[9/16]' : 'aspect-[4/5]'} bg-muted/20 flex flex-col items-center justify-center p-3 group`}>
+                      {editingSlideIdx === idx ? (
+                        <div className="w-full space-y-2">
+                          <textarea
+                            className="w-full text-[10px] border rounded px-2 py-1.5 bg-background"
+                            rows={4}
+                            value={slideDraft}
+                            onChange={e => setSlideDraft(e.target.value)}
+                            autoFocus
+                          />
+                          {slideSaveError && <p className="text-[10px] text-destructive">{slideSaveError}</p>}
+                          <div className="flex gap-1 justify-center">
+                            <Button
+                              size="sm"
+                              className="h-6 text-xs"
+                              onClick={() => handleSaveSlideDescription(idx)}
+                              disabled={savingSlide}
+                            >
+                              {savingSlide ? <Loader2 className="size-3 animate-spin" /> : 'Salvar'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-xs"
+                              onClick={() => setEditingSlideIdx(null)}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-[10px] text-muted-foreground text-center px-4 leading-relaxed">{slide.image_description}</p>
+                          {mediaEntry?.postId && (
+                            <button
+                              onClick={() => {
+                                setEditingSlideIdx(idx)
+                                setSlideDraft(slide.image_description)
+                              }}
+                              className="mt-2 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Editar descrição"
+                            >
+                              <Pencil className="size-3" />
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                   <div className="p-2 flex gap-1.5">
@@ -3987,29 +4838,6 @@ function PostDetailCard({ post, day, onClose, scheduleId, mediaEntry, persistedS
         {mediaError && (
           <div className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 border border-red-200 dark:border-red-900">
             {mediaError}
-          </div>
-        )}
-
-        {/* ── Seletor de duração (somente reels sem cenas) ── */}
-        {!isMultiFrame && !isImageType && !(isReelType && sceneCount > 0) && (
-          <div className="flex items-center gap-2 pt-1">
-            <span className="text-xs text-muted-foreground shrink-0">Duração:</span>
-            <div className="flex gap-1">
-              {([4, 6, 8] as const).map(d => (
-                <button
-                  key={d}
-                  onClick={() => setReelDuration(d)}
-                  disabled={mediaGenerating}
-                  className={`text-xs px-2 py-1 rounded border transition-colors ${
-                    reelDuration === d
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-input hover:border-primary/60 text-muted-foreground'
-                  }`}
-                >
-                  {d}s
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
