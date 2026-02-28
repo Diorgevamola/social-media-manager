@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -29,16 +28,8 @@ type VideoFormData = z.infer<typeof videoSchema>
 interface VideoGeneratorProps {
   onVideoGenerated?: (videoUrl: string) => void
 }
-  'seedance-2.0': {
-    label: 'Seedance 2.0 ⭐ NOVO',
-    description: 'Última geração, melhor qualidade e controle',
-    endpoint: '/api/media/generate-video-seedance-2',
-    costPerMin: '~$0.05/min',
-  },
-}
 
 export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
-  const [selectedModel, setSelectedModel] = useState<'veo-3.1' | 'seedance-1' | 'seedance-2.0'>('seedance-2.0')
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null)
   const [progress, setProgress] = useState<string | null>(null)
@@ -47,22 +38,14 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
     defaultValues: {
-      model: 'seedance-2.0',
-      aspectRatio: '9:16',
-      resolution: '1080p',
-      duration: 5,
-      audio: true,
+      duration: 8,
     },
   })
-
-  const watchedDuration = watch('duration')
-  const watchedModel = watch('model')
 
   async function onSubmit(data: VideoFormData) {
     setIsGenerating(true)
@@ -71,24 +54,12 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
     setGeneratedVideoUrl(null)
 
     try {
-      const modelInfo = {
-        'veo-3.1': '/api/media/generate-video',
-        'seedance-1': '/api/media/generate-video-seedance',
-        'seedance-2.0': '/api/media/generate-video-seedance-2',
-      }
-
-      const endpoint = modelInfo[data.model]
-
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/media/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: data.prompt,
-          image_url: data.imageUrl || undefined,
-          aspect_ratio: data.aspectRatio,
-          resolution: data.resolution,
           duration: data.duration,
-          audio: data.audio,
         }),
       })
 
@@ -123,7 +94,7 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
               } else if (data.type === 'error') {
                 throw new Error(data.message)
               }
-            } catch (e) {
+            } catch {
               // Ignore JSON parse errors
             }
           }
@@ -145,35 +116,10 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             Gerador de Vídeos com IA
           </CardTitle>
           <CardDescription>
-            Escolha entre VEO 3.1, Seedance 1.0 ou Seedance 2.0 (nova!)
+            Crie vídeos profissionais com VEO 3.1 em alta qualidade
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Model Selection */}
-          <div className="space-y-3">
-            <Label>Modelo de Geração</Label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {Object.entries(modelInfo).map(([key, info]) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setSelectedModel(key as any)
-                    setValue('model', key as any)
-                  }}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
-                    selectedModel === key
-                      ? 'border-primary bg-primary/5'
-                      : 'border-muted hover:border-primary/50'
-                  }`}
-                >
-                  <p className="font-semibold text-sm">{info.label}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{info.description}</p>
-                  <p className="text-xs text-muted-foreground mt-1.5">Custo: {info.costPerMin}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Prompt */}
             <div className="space-y-2">
@@ -189,77 +135,22 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
               {errors.prompt && <p className="text-destructive text-xs">{errors.prompt.message}</p>}
             </div>
 
-            {/* Image URL (for image-to-video) */}
-            {selectedModel !== 'veo-3.1' && (
-              <div className="space-y-2">
-                <Label>URL da Imagem (opcional)</Label>
-                <Input
-                  type="url"
-                  placeholder="https://..."
-                  {...register('imageUrl')}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Para {selectedModel === 'seedance-1' ? 'Seedance 1.0' : 'Seedance 2.0'}, você pode fornecer uma imagem de referência
-                </p>
-              </div>
-            )}
-
-            {/* Video Settings Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="space-y-2">
-                <Label>Aspecto</Label>
-                <Select defaultValue="9:16" onValueChange={(v) => setValue('aspectRatio', v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="16:9">16:9</SelectItem>
-                    <SelectItem value="9:16">9:16</SelectItem>
-                    <SelectItem value="4:3">4:3</SelectItem>
-                    <SelectItem value="3:4">3:4</SelectItem>
-                    <SelectItem value="1:1">1:1</SelectItem>
-                    <SelectItem value="21:9">21:9</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Resolução</Label>
-                <Select defaultValue="1080p" onValueChange={(v) => setValue('resolution', v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="480p">480p</SelectItem>
-                    <SelectItem value="720p">720p</SelectItem>
-                    <SelectItem value="1080p">1080p</SelectItem>
-                    {selectedModel === 'seedance-2.0' && <SelectItem value="2K">2K</SelectItem>}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Duração (s)</Label>
-                <Input
-                  type="number"
-                  min={selectedModel === 'seedance-1' ? 2 : 4}
-                  max={selectedModel === 'seedance-1' ? 12 : 15}
-                  {...register('duration', { valueAsNumber: true })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Áudio</Label>
-                <Select defaultValue="true" onValueChange={(v) => setValue('audio', v === 'true')}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Sim</SelectItem>
-                    <SelectItem value="false">Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Duração do vídeo */}
+            <div className="space-y-2">
+              <Label>Duração (segundos)</Label>
+              <Select defaultValue="8" onValueChange={(v) => setValue('duration', Number(v) as 4 | 6 | 8)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="4">4 segundos</SelectItem>
+                  <SelectItem value="6">6 segundos</SelectItem>
+                  <SelectItem value="8">8 segundos</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Duração recomendada para Stories e Reels do Instagram
+              </p>
             </div>
 
             <Button
@@ -306,33 +197,19 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
         </CardContent>
       </Card>
 
-      {/* Info cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-        <Card>
-          <CardContent className="pt-4">
-            <p className="font-semibold mb-2">VEO 3.1</p>
-            <p className="text-muted-foreground text-xs">
-              Rápido, excelente qualidade. Duração: 4-8s. Custo: ~$0.15/min
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="font-semibold mb-2">Seedance 1.0</p>
-            <p className="text-muted-foreground text-xs">
-              Imagem-para-vídeo. Duração: 2-12s. Custo: ~$0.10/min
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="font-semibold mb-2">Seedance 2.0</p>
-            <p className="text-muted-foreground text-xs">
-              Última geração! Até 2K, 4-15s, melhor qualidade. Custo: ~$0.05/min
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Info card */}
+      <Card>
+        <CardContent className="pt-4">
+          <p className="font-semibold mb-2">Sobre VEO 3.1</p>
+          <ul className="text-muted-foreground text-xs space-y-1">
+            <li>✓ Geração de vídeo de alta qualidade</li>
+            <li>✓ Duração: 4, 6 ou 8 segundos</li>
+            <li>✓ Resolução: 720p</li>
+            <li>✓ Aspecto: 9:16 (ideal para Reels)</li>
+            <li>✓ Custo: ~$0.15/minuto</li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   )
 }

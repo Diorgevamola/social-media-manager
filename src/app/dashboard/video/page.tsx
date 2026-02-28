@@ -1,9 +1,7 @@
 'use client'
 
 import { VideoGenerator } from '@/components/content/video-generator'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { AlertCircle, CheckCircle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function VideoPage() {
   return (
@@ -11,71 +9,34 @@ export default function VideoPage() {
       <div>
         <h1 className="text-3xl font-bold">Gerador de Vídeos</h1>
         <p className="text-muted-foreground mt-2">
-          Crie vídeos profissionais com IA usando VEO 3.1, Seedance 1.0 ou Seedance 2.0
+          Crie vídeos profissionais com IA usando o VEO 3.1
         </p>
       </div>
 
-      <Alert>
-        <CheckCircle className="size-4" />
-        <AlertTitle>Seedance 2.0 Disponível! 🎉</AlertTitle>
-        <AlertDescription>
-          Agora você pode usar Seedance 2.0, a última geração com qualidade superior, resoluções até 2K e preços 3x mais baratos que a v1.
-        </AlertDescription>
-      </Alert>
-
       <VideoGenerator />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Capacidades</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>✓ Texto para vídeo</p>
-            <p>✓ Imagem para vídeo (Seedance)</p>
-            <p>✓ Áudio nativo com lip-sync</p>
-            <p>✓ Até 12 arquivos de referência</p>
-            <p>✓ Resoluções até 2K (Seedance 2.0)</p>
-            <p>✓ Durações: 4-15 segundos</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Preços Estimados</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>VEO 3.1: ~$0.15/min</p>
-            <p>Seedance 1.0: ~$0.10/min</p>
-            <p>Seedance 2.0: ~$0.05/min ⭐</p>
-            <p>10s em 1080p: ~$0.01-$0.03</p>
-            <p className="text-xs text-muted-foreground pt-2">
-              100x mais barato que Sora 2
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Dicas de Uso</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>• Use descrições detalhadas</p>
-            <p>• Especifique o tom e estilo</p>
-            <p>• Indique movimento de câmera</p>
-            <p>• Mencionue objetos-chave</p>
-            <p>• Durações curtas = melhores</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Alert variant="destructive">
-        <AlertCircle className="size-4" />
-        <AlertTitle>Atenção</AlertTitle>
-        <AlertDescription>
-          Para usar Seedance 2.0, certifique-se de que a chave LAOZHANG_API_KEY está configurada no .env.local
-        </AlertDescription>
-      </Alert>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Como Usar</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p><strong>Capacidades:</strong></p>
+          <ul className="list-disc list-inside space-y-1 text-muted-foreground mb-4">
+            <li>Geração de texto para vídeo</li>
+            <li>Duração: 4, 6 ou 8 segundos</li>
+            <li>Resolução: 720p</li>
+            <li>Aspecto: 9:16 (ideal para Reels)</li>
+          </ul>
+          <p><strong>Dicas:</strong></p>
+          <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+            <li>Use descrições detalhadas e específicas</li>
+            <li>Especifique o tom, estilo e ambiente</li>
+            <li>Indique movimentos de câmera desejados</li>
+            <li>Mencione elementos visuais-chave</li>
+            <li>Durações curtas (6-8s) geram melhor qualidade</li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   )
 }
