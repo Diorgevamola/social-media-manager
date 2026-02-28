@@ -105,6 +105,31 @@ export interface SchedulePostRow {
   ig_container_id: string | null
   publish_error: string | null
   publish_attempts: number
+  publish_history: {
+    attempts: Array<{
+      timestamp: string
+      attempt: number
+      status: 'success' | 'pending_reel' | 'error'
+      igMediaId?: string
+      igContainerId?: string
+      error?: string
+    }>
+    lastAttempt?: string
+  } | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PublishLog {
+  id: string
+  user_id: string
+  post_id: string
+  attempt_number: number
+  status: 'success' | 'pending_reel' | 'error'
+  ig_media_id: string | null
+  ig_container_id: string | null
+  error_message: string | null
+  duration_ms: number | null
   created_at: string
   updated_at: string
 }
@@ -331,6 +356,7 @@ export type Database = {
           ig_container_id?: string | null
           publish_error?: string | null
           publish_attempts?: number
+          publish_history?: SchedulePostRow['publish_history']
           created_at?: string
           updated_at?: string
         }
@@ -347,6 +373,31 @@ export type Database = {
           ig_container_id?: string | null
           publish_error?: string | null
           publish_attempts?: number
+          publish_history?: SchedulePostRow['publish_history']
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      schedule_posts_publish_log: {
+        Row: PublishLog
+        Insert: {
+          id?: string
+          user_id: string
+          post_id: string
+          attempt_number: number
+          status: 'success' | 'pending_reel' | 'error'
+          ig_media_id?: string | null
+          ig_container_id?: string | null
+          error_message?: string | null
+          duration_ms?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          status?: 'success' | 'pending_reel' | 'error'
+          ig_media_id?: string | null
+          ig_container_id?: string | null
+          error_message?: string | null
           updated_at?: string
         }
         Relationships: []
