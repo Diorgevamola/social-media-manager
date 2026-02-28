@@ -21,12 +21,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const videoSchema = z.object({
   prompt: z.string().min(10, 'Descrição deve ter pelo menos 10 caracteres'),
-  model: z.enum(['veo-3.1', 'seedance-1', 'seedance-2.0']),
-  imageUrl: z.string().url().optional().or(z.literal('')),
-  aspectRatio: z.enum(['16:9', '9:16', '4:3', '3:4', '1:1', '21:9']).default('9:16'),
-  resolution: z.enum(['480p', '720p', '1080p', '2K']).default('1080p'),
-  duration: z.coerce.number().int().min(4).max(15).default(5),
-  audio: z.boolean().default(true),
+  duration: z.union([z.literal(4), z.literal(6), z.literal(8)]).default(8),
 })
 
 type VideoFormData = z.infer<typeof videoSchema>
@@ -34,20 +29,6 @@ type VideoFormData = z.infer<typeof videoSchema>
 interface VideoGeneratorProps {
   onVideoGenerated?: (videoUrl: string) => void
 }
-
-const modelInfo: Record<string, { label: string; description: string; endpoint: string; costPerMin: string }> = {
-  'veo-3.1': {
-    label: 'VEO 3.1 Fast',
-    description: 'Geração rápida, qualidade excelente',
-    endpoint: '/api/media/generate-video',
-    costPerMin: '~$0.15/min',
-  },
-  'seedance-1': {
-    label: 'Seedance 1.0 Pro',
-    description: 'Compatível agora, imagem-para-vídeo',
-    endpoint: '/api/media/generate-video-seedance',
-    costPerMin: '~$0.10/min',
-  },
   'seedance-2.0': {
     label: 'Seedance 2.0 ⭐ NOVO',
     description: 'Última geração, melhor qualidade e controle',
