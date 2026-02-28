@@ -106,7 +106,7 @@ export function AccountCard({ account }: AccountCardProps) {
               )}
               {isMetaConnected ? (
                 <div className="flex items-center gap-1">
-                  <Badge className="text-[10px] h-4 bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300">
+                  <Badge className="text-[10px] h-4 bg-success/10 text-success border-success/30">
                     Conectado ao Meta
                   </Badge>
                   <DisconnectMetaButton accountId={account.id} username={account.username} />

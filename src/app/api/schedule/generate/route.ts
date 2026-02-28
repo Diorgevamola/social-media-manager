@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { GoogleGenAI } from '@google/genai'
 import { logAiUsage } from '@/lib/log-ai-usage'
 import { z } from 'zod'
 import { addDays, format, getDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { ScheduleDay } from '@/types/schedule'
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+const MODEL = 'moonshotai/kimi-k2.5'
 
 const DAY_NAMES = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
 
@@ -389,75 +389,106 @@ Retorne APENAS um JSON válido com esta estrutura exata (contém exemplos dos 5 
         try {
           send({ type: 'start', totalDays: days.length })
 
-          const geminiStream = await ai.models.generateContentStream({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: { thinkingConfig: { thinkingBudget: 0 } },
+          const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: MODEL,
+              messages: [{ role: 'user', content: prompt }],
+              temperature: 0.7,
+              max_tokens: 8000,
+              stream: true,
+            }),
           })
-          let usageMeta: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined
+
+          if (!response.ok) {
+            throw new Error(`OpenRouter API error: ${response.status}`)
+          }
 
           let buffer = ''
           let scanFrom = 0
           let foundScheduleArray = false
           let completedCount = 0
 
-          for await (const chunk of geminiStream) {
-            const meta = chunk.usageMetadata
-            if (meta) usageMeta = meta as typeof usageMeta
-            buffer += chunk.text ?? ''
+          const reader = response.body?.getReader()
+          if (!reader) throw new Error('No response body')
 
-            // Detect the start of the "schedule" array
-            if (!foundScheduleArray) {
-              const schedIdx = buffer.indexOf('"schedule"')
-              if (schedIdx !== -1) {
-                const arrIdx = buffer.indexOf('[', schedIdx)
-                if (arrIdx !== -1) {
-                  foundScheduleArray = true
-                  scanFrom = arrIdx + 1
+          const decoder = new TextDecoder()
+          let isReading = true
+          while (isReading) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value, { stream: true })
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+                if (data === '[DONE]') continue
+                try {
+                  const parsed = JSON.parse(data) as { choices: Array<{ delta: { content?: string } }> }
+                  const text = parsed.choices[0]?.delta?.content ?? ''
+                  buffer += text
+                } catch {
+                  // Ignore parse errors
                 }
               }
             }
+          }
 
-            // Extract completed day objects from buffer
-            if (foundScheduleArray) {
-              let keepSearching = true
-              while (keepSearching) {
-                // Skip whitespace and commas
-                let i = scanFrom
-                while (i < buffer.length && ',\n\r\t '.includes(buffer[i])) i++
-
-                // Expect start of a day object
-                if (i >= buffer.length || buffer[i] !== '{') {
-                  keepSearching = false
-                  break
-                }
-
-                const end = findObjectEnd(buffer, i)
-                if (end === -1) {
-                  // Day object not complete yet — wait for more chunks
-                  keepSearching = false
-                  break
-                }
-
-                try {
-                  const day = JSON.parse(buffer.slice(i, end + 1)) as ScheduleDay
-                  completedCount++
-                  send({ type: 'day', day, index: completedCount - 1 })
-                } catch {
-                  // Malformed JSON fragment — skip past it
-                }
-
-                scanFrom = end + 1
+          // Detect the start of the "schedule" array
+          if (!foundScheduleArray) {
+            const schedIdx = buffer.indexOf('"schedule"')
+            if (schedIdx !== -1) {
+              const arrIdx = buffer.indexOf('[', schedIdx)
+              if (arrIdx !== -1) {
+                foundScheduleArray = true
+                scanFrom = arrIdx + 1
               }
+            }
+          }
+
+          // Extract completed day objects from buffer
+          if (foundScheduleArray) {
+            let keepSearching = true
+            while (keepSearching) {
+              // Skip whitespace and commas
+              let i = scanFrom
+              while (i < buffer.length && ',\n\r\t '.includes(buffer[i])) i++
+
+              // Expect start of a day object
+              if (i >= buffer.length || buffer[i] !== '{') {
+                keepSearching = false
+                break
+              }
+
+              const end = findObjectEnd(buffer, i)
+              if (end === -1) {
+                // Day object not complete yet — wait for more chunks
+                keepSearching = false
+                break
+              }
+
+              try {
+                const day = JSON.parse(buffer.slice(i, end + 1)) as ScheduleDay
+                completedCount++
+                send({ type: 'day', day, index: completedCount - 1 })
+              } catch {
+                // Malformed JSON fragment — skip past it
+              }
+
+              scanFrom = end + 1
             }
           }
 
           logAiUsage({
             userId: user.id,
             operationType: 'schedule',
-            model: 'gemini-2.5-flash',
-            inputTokens:  usageMeta?.promptTokenCount     ?? 0,
-            outputTokens: usageMeta?.candidatesTokenCount ?? 0,
+            model: MODEL,
           })
 
           send({

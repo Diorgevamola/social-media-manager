@@ -274,7 +274,7 @@ export function PostEditor({
                   {caption || <span className="text-muted-foreground">Legenda aparecerá aqui...</span>}
                 </p>
                 {hashtags.length > 0 && (
-                  <p className="text-xs text-blue-600 mt-1 line-clamp-2">
+                  <p className="text-xs text-info mt-1 line-clamp-2">
                     {hashtags.slice(0, 5).map((h) => `#${h}`).join(' ')}
                     {hashtags.length > 5 && ` +${hashtags.length - 5}`}
                   </p>
@@ -299,13 +299,13 @@ export function PostEditor({
                 <SelectContent>
                   <SelectItem value="draft">
                     <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-orange-400 inline-block" />
+                      <span className="size-2 rounded-full bg-warning inline-block" />
                       Rascunho
                     </div>
                   </SelectItem>
                   <SelectItem value="planned">
                     <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-green-400 inline-block" />
+                      <span className="size-2 rounded-full bg-success inline-block" />
                       Planejado
                     </div>
                   </SelectItem>

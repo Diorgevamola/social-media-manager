@@ -1,0 +1,34 @@
+{
+  "session": "794a24da-dab6-47b8-aefa-3485f0e39b25",
+  "updatedAt": "2026-02-28T03:46:31.057Z",
+  "tasks": {
+    "794a24da_106": {
+      "id": "794a24da_106",
+      "numericId": "106",
+      "sessionId": "794a24da-dab6-47b8-aefa-3485f0e39b25",
+      "subject": "Aumentar tamanho de pré-visualização de imagens no modal de posts (schedule)",
+      "description": "## Problema\nQuando o usuário clica em uma postagem na página de cronograma, o modal mostra a imagem gerada em tamanho muito pequeno na seção \"TODOS OS FRAMES\", tornando impossível visualizar detalhes da imagem.\n\n## Solução Proposta\n1. **Aumentar o tamanho das thumbnails** na seção \"TODOS OS FRAMES\" \n2. **Adicionar um modal lightbox** ao clicar na imagem para visualização em tamanho grande\n3. **Implementar zoom/escala** para melhor visualização\n\n## Arquivos Afetados\n- `src/components/schedule/schedule-calendar.tsx` - Componente do modal\n- `src/components/schedule/add-post-dialog.tsx` - Dialog de adição/edição\n- Possível novo componente para lightbox\n\n## Aceitação\n- ✅ Imagens com tamanho legível no modal\n- ✅ Possibilidade de expandir/ampliar a imagem\n- ✅ Mantém design responsivo\n- ✅ Sem quebra de funcionalidade existente",
+      "activeForm": "Aumentando tamanho de pré-visualização de imagens",
+      "blockedBy": [],
+      "blocks": [],
+      "status": "completed",
+      "needsReview": true,
+      "createdAt": "2026-02-28T03:29:50.307Z",
+      "updatedAt": "2026-02-28T03:37:07.469Z"
+    },
+    "794a24da_107": {
+      "id": "794a24da_107",
+      "numericId": "107",
+      "sessionId": "794a24da-dab6-47b8-aefa-3485f0e39b25",
+      "subject": "Melhorar UX do modal de slides: contador visível, menu dropdown, preview inline",
+      "description": "Implementar melhorias identificadas na análise UX:\n1. Contador \"Slide X de Y\" mais visível e destacado\n2. Colapsar ações secundárias (Refazer mídia, Refazer post, Editar) em menu dropdown\n3. Adicionar preview inline do slide selecionado acima da faixa de thumbnails",
+      "activeForm": "Implementando melhorias UX do modal de slides",
+      "blockedBy": [],
+      "blocks": [],
+      "status": "completed",
+      "needsReview": true,
+      "createdAt": "2026-02-28T03:45:49.179Z",
+      "updatedAt": "2026-02-28T03:46:31.028Z"
+    }
+  }
+}

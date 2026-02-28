@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   logAiUsage({
     userId: user.id,
     operationType: 'text',
-    model: 'gemini-1.5-flash',
+    model: 'moonshotai/kimi-k2.5',
   })
 
   return NextResponse.json(content)

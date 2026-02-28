@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateContentIdeas } from '@/lib/gemini-server'
+import { generateContentIdeas } from '@/lib/openrouter/client'
 import { logAiUsage } from '@/lib/log-ai-usage'
 import { z } from 'zod'
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     logAiUsage({
       userId: user.id,
       operationType: 'ideas',
-      model: 'gemini-1.5-flash',
+      model: 'moonshotai/kimi-k2.5',
     })
 
     return NextResponse.json(result)

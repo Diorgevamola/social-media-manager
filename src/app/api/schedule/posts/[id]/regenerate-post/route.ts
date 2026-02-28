@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-key-auth'
-import { generateInstagramContent } from '@/lib/gemini/client'
+import { generateInstagramContent } from '@/lib/openrouter/client'
 
 const STORAGE_BUCKET = 'schedule-media'
 

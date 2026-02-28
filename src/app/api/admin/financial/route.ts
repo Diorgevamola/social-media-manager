@@ -92,7 +92,7 @@ export async function GET(request: Request) {
 
   // Retroactive estimates
   const textPricePerCall  = 0.003
-  const imagePricePerUnit = AI_PRICING['gemini-3-pro-image-preview']?.perImage ?? 0.04
+  const imagePricePerUnit = AI_PRICING['gemini-3.1-flash-image-preview']?.perImage ?? 0.04
   const videoPricePerUnit = AI_PRICING['veo-3.1-generate-preview']?.perVideo ?? 0.35
 
   const estimatedText  = (textCount  ?? 0) * textPricePerCall

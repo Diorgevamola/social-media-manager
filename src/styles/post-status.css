@@ -1,0 +1,155 @@
+/* Post Status Animations & Transitions */
+
+/* Status change animation */
+@keyframes statusChange {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.status-update {
+  animation: statusChange 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Progress fill animation */
+@keyframes progressFill {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--progress-width, 100%);
+  }
+}
+
+.progress-bar {
+  animation: progressFill 0.6s ease-out forwards;
+}
+
+/* Status badge hover effect */
+.status-badge {
+  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.status-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Action button animations */
+.action-button {
+  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.action-button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-loading {
+  animation: spin 1s linear infinite;
+}
+
+/* State transition glow */
+@keyframes stateGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.state-change-glow {
+  animation: stateGlow 0.6s ease-out;
+}
+
+/* Smooth color transitions */
+.status-color-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Badge pulse effect for pending states */
+@keyframes badgePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.badge-pulse {
+  animation: badgePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Tooltip fade in */
+@keyframes tooltipFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip-content {
+  animation: tooltipFade 0.2s ease-out;
+}
+
+/* Dark mode support (class-based via next-themes) */
+:is(.dark *).status-badge:hover {
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+}
+
+:is(.dark *).action-button:not(:disabled):hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .status-update,
+  .progress-bar,
+  .status-badge,
+  .action-button,
+  .state-change-glow,
+  .badge-pulse,
+  .tooltip-content {
+    animation: none;
+  }
+
+  .status-badge,
+  .action-button,
+  .status-color-transition {
+    transition: none;
+  }
+}

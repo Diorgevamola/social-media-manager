@@ -16,6 +16,35 @@ function extractStoragePath(url: string): string | null {
   }
 }
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const auth = await authenticateRequest(request)
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId, supabase } = auth
+
+    const { id } = await params
+
+    // Fetch the post
+    const { data: post, error } = await supabase
+      .from('schedule_posts')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+
+    return NextResponse.json(post)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro ao buscar post'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -77,13 +106,22 @@ export async function PATCH(
     const { userId, supabase } = auth
 
     const { id } = await params
-    const body = await request.json() as { date?: string; time?: string | null; confirmed?: boolean; caption?: string | null }
+    const body = await request.json() as {
+      date?: string
+      time?: string | null
+      confirmed?: boolean
+      caption?: string | null
+      visual_data?: Record<string, unknown>
+      script_data?: Record<string, unknown>
+    }
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (body.date !== undefined) updates.date = body.date
     if ('time' in body) updates.time = body.time ?? null
     if (body.confirmed !== undefined) updates.confirmed = body.confirmed
     if ('caption' in body) updates.caption = body.caption
+    if (body.visual_data !== undefined) updates.visual_data = body.visual_data
+    if (body.script_data !== undefined) updates.script_data = body.script_data
 
     const { error } = await supabase
       .from('schedule_posts')

@@ -1,0 +1,24 @@
+{
+  "sessions": {
+    "794a24da-dab6-47b8-aefa-3485f0e39b25": {
+      "status": "idle",
+      "lastStopAt": "2026-02-28T03:49:04.829Z",
+      "lastResponseDurationMs": 26963,
+      "sessionId": "794a24da-dab6-47b8-aefa-3485f0e39b25",
+      "updatedAt": "2026-02-28T03:50:48.553Z",
+      "lastPrompt": null,
+      "lastPromptAt": null,
+      "cwd": "C:\\Users\\diorg\\social-media-manager",
+      "transcriptPath": "C:\\Users\\diorg\\.claude\\projects\\C--Users-diorg-aios-core\\794a24da-dab6-47b8-aefa-3485f0e39b25.jsonl",
+      "startedAt": "2026-02-28T03:50:48.480Z",
+      "branch": "master"
+    }
+  },
+  "status": "idle",
+  "lastPrompt": "identifique o moodal que aparece quando clica em uma postagem de todos os posts",
+  "lastPromptAt": "2026-02-28T03:48:37.866Z",
+  "lastStopAt": "2026-02-28T03:49:04.829Z",
+  "branch": "master",
+  "sessionId": "794a24da-dab6-47b8-aefa-3485f0e39b25",
+  "updatedAt": "2026-02-28T03:50:48.553Z"
+}

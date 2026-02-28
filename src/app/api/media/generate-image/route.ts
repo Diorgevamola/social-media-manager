@@ -27,10 +27,10 @@ export async function POST(request: Request) {
 
     const { prompt } = parsed.data
     // Nota: aspectRatio não é suportado por generateContent (apenas generateImages/Imagen).
-    // O gemini-3-pro-image-preview usa generateContent com responseModalities.
+    // O gemini-3.1-flash-image-preview usa generateContent com responseModalities.
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-3.1-flash-image-preview',
       contents: prompt,
       config: {
         responseModalities: ['IMAGE'],
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     logAiUsage({
       userId: user.id,
       operationType: 'image',
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-3.1-flash-image-preview',
       generationCount: 1,
     })
 

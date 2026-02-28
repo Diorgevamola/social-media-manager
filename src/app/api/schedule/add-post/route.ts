@@ -175,8 +175,9 @@ export async function POST(request: Request) {
       description,
     })
 
+    // TODO: Migrar para OpenRouter/Kimi K2.5
     const result = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-flash', // Será migrado para Kimi K2.5
       contents: prompt,
       config: { thinkingConfig: { thinkingBudget: 0 } },
     })

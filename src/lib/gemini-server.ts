@@ -1,16 +1,43 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+const MODEL = 'moonshotai/kimi-k2.5'
 
-function getGeminiClient(): GoogleGenerativeAI {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured')
+function getHeaders() {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('OPENROUTER_API_KEY is not configured')
   }
-  return new GoogleGenerativeAI(apiKey)
+  return {
+    Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+    'Content-Type': 'application/json',
+  }
 }
 
-function getModel() {
-  const genAI = getGeminiClient()
-  return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+async function callKimi(prompt: string): Promise<string> {
+  const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 4000,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`OpenRouter API error: ${response.status} - ${error}`)
+  }
+
+  const data = (await response.json()) as {
+    choices: Array<{ message: { content: string } }>
+  }
+  return data.choices[0].message.content
 }
 
 export interface CaptionRequest {
@@ -58,8 +85,6 @@ export interface ContentIdeaResponse {
 }
 
 export async function generateCaptions(request: CaptionRequest): Promise<CaptionResponse> {
-  const model = getModel()
-
   const toneMap: Record<string, string> = {
     professional: 'profissional e corporativo',
     casual: 'casual e descontraido',
@@ -94,8 +119,7 @@ Responda APENAS em JSON valido com este formato:
   "cta": "sugestao de call to action"
 }`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const text = await callKimi(prompt)
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
     throw new Error('Failed to parse AI response')
@@ -104,7 +128,6 @@ Responda APENAS em JSON valido com este formato:
 }
 
 export async function generateHashtags(request: HashtagRequest): Promise<HashtagResponse> {
-  const model = getModel()
   const count = request.count ?? 30
 
   const prompt = `Voce e um especialista em hashtags de Instagram.
@@ -126,8 +149,7 @@ Responda APENAS em JSON valido com este formato:
   }
 }`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const text = await callKimi(prompt)
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
     throw new Error('Failed to parse AI response')
@@ -136,7 +158,6 @@ Responda APENAS em JSON valido com este formato:
 }
 
 export async function generateContentIdeas(request: ContentIdeaRequest): Promise<ContentIdeaResponse> {
-  const model = getModel()
   const count = request.count ?? 5
 
   const typeMap: Record<string, string> = {
@@ -166,8 +187,7 @@ Responda APENAS em JSON valido com este formato:
   ]
 }`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const text = await callKimi(prompt)
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
     throw new Error('Failed to parse AI response')

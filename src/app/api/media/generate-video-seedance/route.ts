@@ -9,8 +9,8 @@ const schema = z.object({
   prompt:       z.string().min(10),
   image_url:    z.string().url().optional(),       // se fornecida → image-to-video
   aspect_ratio: z.enum(['16:9', '9:16', '4:3', '3:4', '1:1', '21:9']).default('9:16'),
-  resolution:   z.enum(['480p', '720p', '1080p', '2k']).default('1080p'),
-  duration:     z.number().int().min(4).max(15).default(5),
+  resolution:   z.enum(['480p', '720p', '1080p']).default('1080p'),
+  duration:     z.number().int().min(2).max(12).default(5),
   audio:        z.boolean().default(false),
   camera_fixed: z.boolean().default(false),
   seed:         z.number().int().optional(),
